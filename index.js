@@ -14,7 +14,7 @@ const port = process.env.PORT || 3000;
 const api = process.env.API;
 
 import categoryRouter from './routes/categories.routes.js';
-// import productRouter from './routes/products.routes.js';
+import productsRouter from './routes/products.routes.js';
 import authRouter from './routes/auth.routes.js';
 // import orderRouter from './routes/orders.routes.js';
 import usersRouter from './routes/users.routes.js';
@@ -45,8 +45,9 @@ app.use(
 
 app.use(authMiddleware);
 
+app.use('/public/uploads', express.static('public/uploads'));
 app.use(`${api}/categories`, categoryRouter);
-// app.use(`${api}/products`, productRouter);
+app.use(`${api}/products`, productsRouter);
 app.use(`${api}/auth`, authRouter);
 // app.use(`${api}/orders`, orderRouter);
 app.use(`${api}/users`, usersRouter);

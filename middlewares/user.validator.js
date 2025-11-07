@@ -1,11 +1,5 @@
 import { body } from 'express-validator';
 
-/*
-  Add validation for a loop update user
-  Object.keys(req.body).forEach((key) => {
-    user[key] = req.body[key];
-  });
-*/
 export const updateUserValidation = [
   body('email')
     .optional()

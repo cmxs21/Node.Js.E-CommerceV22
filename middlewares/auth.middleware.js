@@ -8,7 +8,8 @@ const publicRoutes = [
   '/auth/register',
   '/auth/forgot-password',
   '/auth/reset-password',
-];
+  '/public/uploads',
+]
 
 export const authMiddleware = (req, res, next) => {
   try {
