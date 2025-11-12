@@ -13,6 +13,7 @@ router.post('/', adminAuth, async (req, res) => {
     }
 
     const category = await Category.create({ name: req.body.name });
+
     return res.status(201).send(category);
   } catch (error) {
     return res.status(400).send({ message: error.message });
@@ -24,11 +25,12 @@ router.get('/', async (req, res) => {
     const categories = await Category.find();
 
     if (!categories || categories.length === 0) {
-      return res.status(404).send({ message: req.t('noCategories') });
+      return res.status(404).send({ success: false, message: req.t('noCategories') });
     }
-    return res.status(200).send(categories);
+
+    return res.status(200).json({ success: true, data: categories });
   } catch (error) {
-    return res.status(400).send({ message: error.message });
+    return res.status(400).json({ success: false, message: error.message });
   }
 });
 
@@ -40,9 +42,11 @@ router.delete(
   async (req, res) => {
     try {
       const category = await Category.findByIdAndDelete(req.params.id);
+
       if (!category) {
         return res.status(404).send({ message: req.t('categoryNotFound') });
       }
+
       return res
         .status(200)
         .send({ message: req.t('categoryDeletedSuccessfully') });
@@ -61,10 +65,13 @@ router.put(
     try {
       const category = await Category.findByIdAndUpdate(req.params.id, {
         name: req.body.name,
+        business: req.body.business,
       });
+
       if (!category) {
         return res.status(404).send({ message: req.t('categoryNotFound') });
       }
+
       return res
         .status(200)
         .send({ message: req.t('categoryUpdatedSuccessfully') });

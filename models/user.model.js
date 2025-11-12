@@ -1,12 +1,7 @@
-/**
- * User Model
- * Create the mongoose userSchema model with the required fields: email require unique, password min 6, role enum(admin (default), user),
- * userName required trim unique, city required trim, postalCode required trim, addressLine1 required trim, addressLine2 required trim default empty,
- * phoneNumber required trim
- */
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
+import { USER_STATUS } from '../constants/status.constants.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -22,14 +17,13 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'user'],
+      enum: ['admin', 'merchant', 'staff', 'user'],
       default: 'user',
     },
     userName: {
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
     city: {
       type: String,
@@ -55,6 +49,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    status: {
+      type: String,
+      enum: Object.values(USER_STATUS), // ['active', 'inactive', 'suspended', 'pending'],
+      message: `Invalid user status. Must be one of: ${Object.values(USER_STATUS).join(', ')}`,
+      default: 'active',
     },
   },
   {

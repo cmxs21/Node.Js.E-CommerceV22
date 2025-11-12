@@ -10,6 +10,11 @@ const productSchema = new mongoose.Schema(
       minLength: [3, 'Product title must be at least 3 characters long.'],
       maxLength: [100, 'Product title must be at most 100 characters long.'],
     },
+    business: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Business',
+      required: true,
+    },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category',

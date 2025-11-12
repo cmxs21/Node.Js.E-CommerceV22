@@ -6,6 +6,11 @@ const categorySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  business: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Business',
+    required: true,
+  },
 });
 
 // _id -> id

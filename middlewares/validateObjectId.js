@@ -1,4 +1,3 @@
-//Generic Id validation
 import { param } from 'express-validator';
 
 export const validateObjectId = [

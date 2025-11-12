@@ -13,11 +13,12 @@ const app = express();
 const port = process.env.PORT || 3000;
 const api = process.env.API;
 
+import authRouter from './routes/auth.routes.js';
+import usersRouter from './routes/users.routes.js';
+import businessRouter from './routes/business.routes.js';
 import categoryRouter from './routes/categories.routes.js';
 import productsRouter from './routes/products.routes.js';
-import authRouter from './routes/auth.routes.js';
-// import orderRouter from './routes/orders.routes.js';
-import usersRouter from './routes/users.routes.js';
+import orderRouter from './routes/orders.routes.js';
 
 import { authMiddleware } from './middlewares/auth.middleware.js';
 
@@ -46,11 +47,12 @@ app.use(
 app.use(authMiddleware);
 
 app.use('/public/uploads', express.static('public/uploads'));
+app.use(`${api}/auth`, authRouter);
+app.use(`${api}/users`, usersRouter);
+app.use(`${api}/business`, businessRouter);
 app.use(`${api}/categories`, categoryRouter);
 app.use(`${api}/products`, productsRouter);
-app.use(`${api}/auth`, authRouter);
-// app.use(`${api}/orders`, orderRouter);
-app.use(`${api}/users`, usersRouter);
+app.use(`${api}/orders`, orderRouter);
 
 //Test route
 app.get(`${api}/`, (req, res) => {

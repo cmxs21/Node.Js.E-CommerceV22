@@ -8,7 +8,7 @@ export const registerValidation = [
     .isLength({ min: 6 })
     .withMessage((value, { req }) => req.t('passwordMustBeAtLeast6Characters')),
   body('role')
-    .isIn(['admin', 'user'])
+    .isIn(['admin', 'merchant', 'staff', 'user'])
     .withMessage((value, { req }) => req.t('roleMustBeAdminOrUser')),
   body('userName')
     .isLength({ min: 3 })

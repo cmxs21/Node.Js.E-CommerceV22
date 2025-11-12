@@ -1,4 +1,3 @@
-//Create administration users routes for get and update
 import express from 'express';
 import User from '../models/user.model.js';
 import validateRequest from '../middlewares/validateRequest.js';

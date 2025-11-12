@@ -2,11 +2,11 @@ import express from 'express';
 import ProductModel from '../models/product.model.js';
 import { validateObjectId } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
-import { createProductValidation, updateProductValidation } from '../middlewares/product.validator.js';
 import {
-  adminAuth,
-  userAndAdminAuth,
-} from '../middlewares/roles.middleware.js';
+  createProductValidation,
+  updateProductValidation,
+} from '../middlewares/product.validator.js';
+import { adminAuth, userAndAdminAuth } from '../middlewares/roles.middleware.js';
 import errorHandler from '../middlewares/error.middleware.js';
 import {
   uploadSingleImage,
@@ -35,6 +35,7 @@ router.post(
 
       const newProduct = new ProductModel({
         title: req.body.title,
+        business: req.body.business,
         category: req.body.category,
         price: parseFloat(req.body.price),
         description: req.body.description,
@@ -81,11 +82,7 @@ router.get('/', userAndAdminAuth, async (req, res) => {
     const totalProducts = await ProductModel.countDocuments(filter);
     const totalPages = Math.ceil(totalProducts / limit);
 
-    const products = await ProductModel.find(filter)
-      .populate(
-        'category'
-      ).skip(skip)
-      .limit(limit);
+    const products = await ProductModel.find(filter).populate('category').skip(skip).limit(limit);
 
     const shareDataResponse = {
       search: search,
@@ -96,78 +93,56 @@ router.get('/', userAndAdminAuth, async (req, res) => {
       totalProducts: totalProducts,
       hasNextPage: page < totalPages,
       hasPreviousPage: page > 1,
-    }
+    };
 
     if (!products || products.length === 0) {
       return res.status(200).json({
         success: false,
         message: req.t('productSearchNotFound'),
         data: [],
-        ...shareDataResponse
+        ...shareDataResponse,
       });
     }
 
     return res.status(200).json({
       success: true,
       data: products,
-      ...shareDataResponse
+      ...shareDataResponse,
     });
   } catch (error) {
     errorHandler(error, req, res);
   }
 });
 
-router.get(
-  '/:id',
-  userAndAdminAuth,
-  validateObjectId,
-  validateRequest,
-  async (req, res) => {
-    try {
-      const product = await ProductModel
-        .findByIdAndUpdate(
-          req.params.id,
-          { $inc: { views: 1 } },
-          { new: true }
-        )
-        .populate(
-          'category'
-        );
+router.get('/:id', userAndAdminAuth, validateObjectId, validateRequest, async (req, res) => {
+  try {
+    const product = await ProductModel.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    ).populate('category');
 
-      if (!product) {
-        return res
-          .status(404)
-          .json({ success: false, message: req.t('productNotFound') });
-      }
-
-      return res.status(200).json({ success: true, data: product });
-    } catch (error) {
-      errorHandler(error, req, res);
+    if (!product) {
+      return res.status(404).json({ success: false, message: req.t('productNotFound') });
     }
-  }
-);
 
-router.delete(
-  '/:id',
-  adminAuth,
-  validateObjectId,
-  validateRequest,
-  async (req, res) => {
-    try {
-      const product = await ProductModel.findByIdAndDelete(req.params.id);
-      if (!product) {
-        return res
-          .status(404)
-          .json({ success: false, message: req.t('productNotFound') });
-      }
-      return res
-        .status(200)
-        .json({ success: true, message: req.t('productDeletedSuccessfully') });
-    } catch (error) {
-      errorHandler(error, req, res);
-    }
+    return res.status(200).json({ success: true, data: product });
+  } catch (error) {
+    errorHandler(error, req, res);
   }
-);
+});
+
+router.delete('/:id', adminAuth, validateObjectId, validateRequest, async (req, res) => {
+  try {
+    const product = await ProductModel.findByIdAndDelete(req.params.id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: req.t('productNotFound') });
+    }
+    return res.status(200).json({ success: true, message: req.t('productDeletedSuccessfully') });
+  } catch (error) {
+    errorHandler(error, req, res);
+  }
+});
 
 router.put(
   '/:id',
@@ -181,9 +156,7 @@ router.put(
     try {
       const product = await ProductModel.findById(req.params.id);
       if (!product) {
-        return res
-          .status(404)
-          .json({ success: false, message: req.t('productNotFound') });
+        return res.status(404).json({ success: false, message: req.t('productNotFound') });
       }
 
       Object.keys(req.body).forEach((key) => {
@@ -210,6 +183,8 @@ router.put(
         } else {
           product.image = [...(product.image || []), imageURL];
         }
+      } else if (product.image.length === 0) {
+        product.image = 'noProductImage.png';
       }
 
       const updatedProduct = await product.save();
