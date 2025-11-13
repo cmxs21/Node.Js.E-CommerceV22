@@ -1,8 +1,9 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
-import User from '../models/user.model.js';
 import validateRequest from '../middlewares/validateRequest.js';
+import { sendEmail } from '../services/email.service.js';
 import { registerValidation, loginValidation } from '../middlewares/auth.validator.js';
+import User from '../models/user.model.js';
 import { generateToken } from '../config/jwt.js';
 import errorHandler from '../middlewares/error.middleware.js';
 
@@ -20,6 +21,25 @@ router.post('/register', registerValidation, validateRequest, async (req, res) =
     await user.save();
 
     const token = generateToken(user);
+
+    await sendEmail({
+      to: 'ctecia.reports@gmail.com', //order.user.email,
+      subject: 'New user registered - Tengo Hambre App',
+      text: 'New user registered - Tengo Hambre App',
+      html:
+        '<p>New user registered - Tengo Hambre App</p> <p>Username: ' +
+        user.userName +
+        '</p> <p>Role: ' +
+        user.role +
+        '</p> <p>Email: ' +
+        user.email +
+        '</p> <p>Phone number: ' +
+        user.phoneNumber +
+        '</p> <p>Location: ' +
+        user.city +
+        ' ' +
+        user.postalCode,
+    });
 
     return res.status(201).json({
       success: true,

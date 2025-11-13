@@ -1,14 +1,15 @@
 import express from 'express';
 import { userAuth } from '../middlewares/roles.middleware.js';
-import Business from '../models/business.model.js';
-import OrderModel from '../models/order.model.js';
-import { createOrdersGroupedByBusiness } from '../controllers/order.controller.js';
 import errorHandler from '../middlewares/error.middleware.js';
 import { validateObjectId } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
+import { sendEmail } from '../services/email.service.js';
+import Business from '../models/business.model.js';
+import OrderModel from '../models/order.model.js';
+import ProductModel from '../models/product.model.js';
+import { createOrdersGroupedByBusiness } from '../controllers/order.controller.js';
 import { ORDER_STATUS, ORDER_STATUS_VALID_TRANSITIONS } from '../constants/status.constants.js';
 import dotenv from 'dotenv';
-import ProductModel from '../models/product.model.js';
 dotenv.config();
 
 const router = express.Router();
@@ -148,35 +149,39 @@ router.patch('/:id/status', validateObjectId, validateRequest, async (req, res) 
       });
     }
 
-    const orderPreviousStatus = await OrderModel.findById(id).select('status').lean();
+    const orderPreviousData = await OrderModel.findById(id)
+      .populate('business', 'name logo')
+      .lean();
 
-    if (!orderPreviousStatus) {
+    if (!orderPreviousData) {
       return res.status(404).json({ success: false, message: req.t('orderNotFound') });
     }
 
-    if (orderPreviousStatus.status === ORDER_STATUS.CANCELLED) {
+    if (orderPreviousData.status === ORDER_STATUS.CANCELLED) {
       return res.status(400).json({
         success: false,
         message: req.t('orderReactivationNotAllowed'),
-        currentStatus: orderPreviousStatus.status,
+        currentStatus: orderPreviousData.status,
       });
     }
 
-    const allowedNextStatuses = ORDER_STATUS_VALID_TRANSITIONS[orderPreviousStatus.status];
+    const allowedNextStatuses = ORDER_STATUS_VALID_TRANSITIONS[orderPreviousData.status];
 
     if (!allowedNextStatuses.includes(status.toLowerCase())) {
       return res.status(400).json({
         success: false,
-        message: req.t('orderInvalidStatusTransition'),
-        currentStatus: orderPreviousStatus.status,
+        message: req.t('orderInvalidStatusTransition', {
+          from: orderPreviousData.status,
+          to: status.toLowerCase(),
+        }),
       });
     }
 
-    if (status === orderPreviousStatus.status) {
+    if (status === orderPreviousData.status) {
       return res.status(400).json({
         success: false,
         message: req.t('orderAlreadyHasTheStatus'),
-        currentStatus: orderPreviousStatus.status,
+        currentStatus: orderPreviousData.status,
       });
     }
 
@@ -230,10 +235,7 @@ router.patch('/:id/status', validateObjectId, validateRequest, async (req, res) 
     }
 
     //Return stock for cancellation
-    if (
-      status === ORDER_STATUS.CANCELLED &&
-      orderPreviousStatus.status !== ORDER_STATUS.CANCELLED
-    ) {
+    if (status === ORDER_STATUS.CANCELLED && orderPreviousData.status !== ORDER_STATUS.CANCELLED) {
       const updates = order.orderItems.map((item) => ({
         updateOne: {
           filter: { _id: item.product },
@@ -242,11 +244,25 @@ router.patch('/:id/status', validateObjectId, validateRequest, async (req, res) 
       }));
 
       await ProductModel.bulkWrite(updates);
+
+      await sendEmail({
+        to: 'ctecia.reports@gmail.com', //order.user.email,
+        subject: req.t('orderStatusUpdatedSuccessfully', { status: req.t(status) }),
+        text: req.t('orderStatusUpdatedSuccessfully', { status: req.t(status) }),
+        html: req.t('orderStatusUpdatedSuccessfullyNotification', {
+          businessName: orderPreviousData.business.name,
+          name: orderPreviousData.name,
+          orderId: orderPreviousData._id,
+          status: req.t(status),
+        }),
+      });
     }
 
-    res
-      .status(200)
-      .json({ success: true, message: req.t('orderStatusUpdatedSuccessfully'), data: order });
+    res.status(200).json({
+      success: true,
+      message: req.t('orderStatusUpdatedSuccessfully', { status: req.t(status) }),
+      data: order,
+    });
   } catch (error) {
     errorHandler(error, req, res);
   }
