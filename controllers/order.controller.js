@@ -4,6 +4,7 @@ import OrderModel from '../models/order.model.js';
 import ProductModel from '../models/product.model.js';
 import { getNextOrderNumberForBusiness, formatOrderNumber } from '../services/counter.service.js';
 import errorHandler from '../middlewares/error.middleware.js';
+import { isBusinessOpen } from '../utils/time.utils.js';
 
 export const createOrdersGroupedByBusiness = async (req, res) => {
   //Create order for each business
@@ -76,6 +77,30 @@ export const createOrdersGroupedByBusiness = async (req, res) => {
       const businesId = product.business.id.toString();
       if (!itemsWithPricesByBusiness[businesId]) {
         itemsWithPricesByBusiness[businesId] = [];
+
+        //Verify if business is open
+        const business = product.business;
+        const businessOpen = isBusinessOpen(business);
+        if (businessOpen.isOpen === false) {
+          let nextOpeningText = '';
+
+          if (businessOpen.nextOpening) {
+            nextOpeningText = `${req.t(businessOpen.nextOpening.day)}, ${
+              businessOpen.nextOpening.time
+            }`;
+          } else {
+            nextOpeningText = req.t('noNextOpeningAvailable');
+          }
+
+          return res.status(400).json({
+            success: false,
+            message: req.t('businessIsClosed', {
+              businessName: business.name,
+              nextOpening: nextOpeningText,
+            }),
+            nextOpening: businessOpen.nextOpening,
+          });
+        }
       }
 
       itemsWithPricesByBusiness[businesId].push({
@@ -158,11 +183,15 @@ export const createOrdersGroupedByBusiness = async (req, res) => {
               (item) => `
                 <tr>
                   <td style="padding: 8px 0; display: flex; align-items: center;">
-                    <img src="${item.product.image}" width="45" height="45" style="margin-right: 8px; border-radius: 6px;" />
+                    <img src="${
+                      item.product.image
+                    }" width="45" height="45" style="margin-right: 8px; border-radius: 6px;" />
                     ${item.title}
                   </td>
                   <td style="padding: 8px 0; text-align: right;">${item.quantity}</td>
-                  <td style="padding: 8px 0; text-align: right;">$${(item.price * item.quantity).toFixed(2)}</td>
+                  <td style="padding: 8px 0; text-align: right;">$${(
+                    item.price * item.quantity
+                  ).toFixed(2)}</td>
                 </tr>
               `
             )
@@ -181,9 +210,15 @@ export const createOrdersGroupedByBusiness = async (req, res) => {
                 </thead>
                 <tbody>${itemsHtml}</tbody>
               </table>
-              <p style="margin-top:10px;"><strong>${req.t('tax')}:</strong> $${order.taxPrice.toFixed(2)}</p>
-              <p style="margin-top:10px;"><strong>${req.t('shipping')}:</strong> $${order.shippingPrice.toFixed(2)}</p>
-              <p style="margin-top:10px;"><strong>${req.t('total')}:</strong> $${order.totalPrice.toFixed(2)}</p>
+              <p style="margin-top:10px;"><strong>${req.t(
+                'tax'
+              )}:</strong> $${order.taxPrice.toFixed(2)}</p>
+              <p style="margin-top:10px;"><strong>${req.t(
+                'shipping'
+              )}:</strong> $${order.shippingPrice.toFixed(2)}</p>
+              <p style="margin-top:10px;"><strong>${req.t(
+                'total'
+              )}:</strong> $${order.totalPrice.toFixed(2)}</p>
               <p><strong>${req.t('orderNumber')}:</strong> ${order.orderNumber}</p>
               <p style="margin-top:15px; font-size: 13px; color: #555;">
                 ${req.t('merchant')}: ${business.owner.userName} <br/>

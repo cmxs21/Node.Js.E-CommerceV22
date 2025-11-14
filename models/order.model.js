@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
-import Counter from './counter.model.js';
+//import Counter from './counter.model.js';
 import {
   ORDER_STATUS,
   DELIVERY_METHOD,

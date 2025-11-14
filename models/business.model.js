@@ -1,6 +1,23 @@
 import mongoose from 'mongoose';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
 
+const openingRangeSchema = new mongoose.Schema({
+  start: { type: String, required: true },
+  end: { type: String, required: true },
+});
+
+const openingHoursSchema = new mongoose.Schema({
+  day: {
+    type: String,
+    enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+    required: true,
+  },
+  ranges: {
+    type: [openingRangeSchema],
+    default: [],
+  },
+});
+
 const businessSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, message: 'Business name is required.' },
@@ -24,6 +41,10 @@ const businessSchema = new mongoose.Schema(
       type: String,
       enum: ['restaurant', 'tech', 'fashion', 'accessories', 'grocery', 'pets', 'health', 'others'],
       default: 'others',
+    },
+    openingHours: {
+      type: [openingHoursSchema],
+      default: [],
     },
     address: {
       address: {

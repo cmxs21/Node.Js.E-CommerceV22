@@ -17,6 +17,8 @@ import {
   merchantAuth,
   staffMerchantAdminAuth,
 } from '../middlewares/roles.middleware.js';
+import { rangesOverlap } from '../utils/time.utils.js';
+
 dotenv.config();
 
 const router = express.Router();
@@ -198,5 +200,119 @@ router.get('/:id', staffMerchantAdminAuth, validateObjectId, validateRequest, as
     errorHandler(error, req, res);
   }
 });
+
+router.post(
+  '/:id/opening-hours',
+  merchantAndAdminAuth,
+  validateObjectId,
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { day, ranges } = req.body;
+      const currentUser = req.auth;
+
+      const business = await Business.findById(id);
+      if (!business) {
+        return res.status(404).json({ success: false, message: req.t('businessNotFound') });
+      }
+
+      const isOwner = business.owner?.toString() === currentUser.id;
+      const isAdmin = currentUser.role === 'admin';
+
+      if (!isOwner && !isAdmin) {
+        return res.status(403).json({
+          success: false,
+          message: req.t('accessDenied'),
+        });
+      }
+
+      if (rangesOverlap(ranges)) {
+        return res.status(400).json({ success: false, message: req.t('rangeOverlapNotAllowed') });
+      }
+
+      const exists = business.openingHours.find((d) => d.day === day);
+
+      if (exists) {
+        return res.status(400).json({ success: false, message: req.t('dayAlreadyExists') });
+      }
+
+      business.openingHours.push({ day, ranges });
+      await business.save();
+
+      res.status(201).json({ success: true, data: business.openingHours });
+    } catch (error) {
+      errorHandler(error, req, res);
+    }
+  }
+);
+
+router.put(
+  '/:id/opening-hours/:day',
+  merchantAndAdminAuth,
+  validateObjectId,
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { id, day } = req.params;
+      const { ranges } = req.body;
+      const currentUser = req.auth;
+
+      const business = await Business.findById(id);
+      if (!business) {
+        return res.status(404).json({ success: false, message: req.t('businessNotFound') });
+      }
+
+      if (business.owner.toString() !== currentUser.id && currentUser.role !== 'admin') {
+        return res.status(403).json({ success: false, message: req.t('accessDenied') });
+      }
+
+      if (rangesOverlap(ranges)) {
+        return res.status(400).json({ success: false, message: req.t('rangeOverlapNotAllowed') });
+      }
+
+      const dayObj = business.openingHours.find((d) => d.day === day);
+      if (!dayObj) {
+        return res.status(404).json({ success: false, message: req.t('openingHoursDayNotFound') });
+      }
+
+      dayObj.ranges = ranges; // reemplazar completamente
+      await business.save();
+
+      res.status(200).json({ success: true, data: dayObj });
+    } catch (error) {
+      errorHandler(error, req, res);
+    }
+  }
+);
+
+router.delete(
+  '/:id/opening-hours/:day',
+  merchantAndAdminAuth,
+  validateObjectId,
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { id, day } = req.params;
+      const currentUser = req.auth;
+
+      const business = await Business.findById(id);
+      if (!business) {
+        return res.status(404).json({ success: false, message: req.t('businessNotFound') });
+      }
+
+      if (business.owner.toString() !== currentUser.id && currentUser.role !== 'admin') {
+        return res.status(403).json({ success: false, message: req.t('accessDenied') });
+      }
+
+      business.openingHours = business.openingHours.filter((d) => d.day !== day);
+      await business.save();
+
+      res.status(200).json({ success: true, message: req.t('openingHoursDeletedSuccessfully') });
+    } catch (error) {
+      errorHandler(error, req, res);
+    }
+  }
+);
 
 export default router;
