@@ -315,4 +315,40 @@ router.delete(
   }
 );
 
+//Add staff to business 
+router.post(
+  '/:id/staff',
+  merchantAndAdminAuth,
+  validateObjectId,
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { user } = req.body;
+      const currentUser = req.auth;
+
+      const business = await Business.findById(id);
+      if (!business) {
+        return res.status(404).json({ success: false, message: req.t('businessNotFound') });
+      }
+
+      if (business.owner.toString() !== currentUser.id && currentUser.role !== 'admin') {
+        return res.status(403).json({ success: false, message: req.t('accessDenied') });
+      }
+
+      const exists = business.staff.find((s) => s.user.toString() === user);
+      if (exists) {
+        return res.status(400).json({ success: false, message: req.t('staffAlreadyExists') });
+      }
+
+      business.staff.push({ user });
+      await business.save();
+
+      res.status(201).json({ success: true, data: business.staff });
+    } catch (error) {
+      errorHandler(error, req, res);
+    }
+  }
+);
+
 export default router;

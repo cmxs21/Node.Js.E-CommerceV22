@@ -3,6 +3,19 @@ import bcrypt from 'bcrypt';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
 import { USER_STATUS } from '../constants/status.constants.js';
 
+const addressSubSchema = new mongoose.Schema({
+  label: { type: String, default: 'Added' },
+  addressLine1: { type: String, required: true },
+  addressLine2: { type: String, default: '' },
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  postalCode: { type: String, required: true },
+  country: { type: String, required: true },
+  phoneNumber: { type: String, default: '' },
+  isDefault: { type: Boolean, default: false },
+  notes: { type: String, default: '' },
+});
+
 const userSchema = new mongoose.Schema(
   {
     email: {
@@ -17,33 +30,13 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['admin', 'merchant', 'staff', 'user'],
+      enum: ['admin', 'user'],
       default: 'user',
     },
     userName: {
       type: String,
       required: true,
       trim: true,
-    },
-    city: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    postalCode: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    addressLine1: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    addressLine2: {
-      type: String,
-      trim: true,
-      default: '',
     },
     phoneNumber: {
       type: String,
@@ -56,6 +49,7 @@ const userSchema = new mongoose.Schema(
       message: `Invalid user status. Must be one of: ${Object.values(USER_STATUS).join(', ')}`,
       default: 'active',
     },
+    addresses: { type: [addressSubSchema], default: [] },// New: multiple addresses (preferred for checkout selection)
   },
   {
     timestamps: true, // add createdAt and updatedAt fields
@@ -92,6 +86,32 @@ userSchema.methods.toJSON = function () {
   });
   delete user.password;
   return user;
+};
+
+// Helper: get default address (returns object or null)
+userSchema.methods.getDefaultAddress = function () {
+  if (this.addresses && this.addresses.length > 0) {
+    const def = this.addresses.find((a) => a.isDefault);
+    if (def) return def;
+    return this.addresses[0];
+  }
+
+  // fallback to legacy single-address fields if present
+  if (this.addressLine1) {
+    return {
+      label: 'Primary',
+      addressLine1: this.addressLine1,
+      addressLine2: this.addressLine2 || '',
+      city: this.city || '',
+      state: this.state || '',
+      postalCode: this.postalCode || '',
+      country: this.country || '',
+      phoneNumber: this.phoneNumber || '',
+      isDefault: true,
+    };
+  }
+
+  return null;
 };
 
 // _id -> id

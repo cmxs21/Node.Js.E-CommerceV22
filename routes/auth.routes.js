@@ -14,6 +14,7 @@ router.post('/register', registerValidation, validateRequest, async (req, res) =
     const user = new User(req.body);
 
     const emailExists = await User.findOne({ email: user.email });
+
     if (emailExists) {
       return res.status(400).json({ success: false, message: req.t('emailAlreadyExists') });
     }
@@ -68,7 +69,7 @@ router.post('/login', loginValidation, validateRequest, async (req, res) => {
     if (user.status !== 'active') {
       return res
         .status(401)
-        .json({ success: false, message: req.t('userInactive'), status: user.status });
+        .json({ success: false, message: req.t('userInactive') });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);

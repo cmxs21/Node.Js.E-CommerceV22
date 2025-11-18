@@ -13,16 +13,6 @@ export const registerValidation = [
   body('userName')
     .isLength({ min: 3 })
     .withMessage((value, { req }) => req.t('userNameCannotBeEmpty')),
-  body('city')
-    .notEmpty()
-    .withMessage((value, { req }) => req.t('cityCannotBeEmpty')),
-  body('postalCode')
-    .notEmpty()
-    .withMessage((value, { req }) => req.t('postalCodeCannotBeEmpty')),
-  body('addressLine1')
-    .notEmpty()
-    .withMessage((value, { req }) => req.t('addressLine1CannotBeEmpty')),
-  body('addressLine2').optional(),
   body('phoneNumber')
     .notEmpty()
     .withMessage((value, { req }) => req.t('phoneNumberCannotBeEmpty'))

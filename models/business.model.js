@@ -29,9 +29,10 @@ const businessSchema = new mongoose.Schema(
     },
     staff: [
       {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        role: { type: String, enum: ['staff'], default: 'staff' },
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        roles: [{ type: String, enum: ['reception', 'waiter', 'kitchen', 'delivery', 'cashier', 'manager'], required: true }],
         isActive: { type: Boolean, default: true },
+        addedAt: { type: Date, default: Date.now },
       },
     ],
     description: { type: String },
