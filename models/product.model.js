@@ -61,6 +61,7 @@ const productSchema = new mongoose.Schema(
         min: [0, 'Rating count must be at least 0.'],
       },
     },
+    isActive: { type: Boolean, default: true },
   },
   {
     timestamps: true,

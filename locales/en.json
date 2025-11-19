@@ -70,6 +70,7 @@
   "businessNameMinLength": "Business name must be at least 3 characters long.",
   "businessRegisteredSuccessfully": "Business registered successfully",
   "businessUpdatedSuccessfully": "Business updated successfully",
+  "businessIdRequired": "Business ID is required",
   "businessNotFound": "Business not found",
   "businessDeletedSuccessfully": "Business deleted successfully",
   "rangeOverlapNotAllowed": "Time ranges cannot overlap",

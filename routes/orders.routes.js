@@ -1,5 +1,5 @@
 import express from 'express';
-import { userAuth } from '../middlewares/roles.middleware.js';
+//import { userAuth } from '../middlewares/roles.middleware.js';
 import errorHandler from '../middlewares/error.middleware.js';
 import { validateObjectId } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
@@ -14,7 +14,7 @@ dotenv.config();
 
 const router = express.Router();
 
-router.post('/create', userAuth, createOrdersGroupedByBusiness);
+router.post('/create', createOrdersGroupedByBusiness);
 
 router.get('/', async (req, res) => {
   try {

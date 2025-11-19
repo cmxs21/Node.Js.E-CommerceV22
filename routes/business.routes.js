@@ -12,53 +12,62 @@ import { registerBusinessValidation } from '../middlewares/business.validator.js
 import { validateObjectId } from '../middlewares/validateObjectId.js';
 import errorHandler from '../middlewares/error.middleware.js';
 import dotenv from 'dotenv';
-import {
-  merchantAndAdminAuth,
-  merchantAuth,
-  staffMerchantAdminAuth,
-} from '../middlewares/roles.middleware.js';
+// import {
+//   merchantAndAdminAuth,
+//   merchantAuth,
+//   staffMerchantAdminAuth,
+// } from '../middlewares/roles.middleware.js';
+import { roleAuthBuilder } from '../middlewares/roles.middleware.js';
 import { rangesOverlap } from '../utils/time.utils.js';
+import { STAFF_ROLES } from '../constants/roles.constants.js';
+import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
 
 dotenv.config();
 
 const router = express.Router();
 
-router.post('/', merchantAuth, registerBusinessValidation, validateRequest, async (req, res) => {
-  try {
-    const { auth: currentUser } = req;
+router.post(
+  '/',
+  roleAuthBuilder.owner(),
+  registerBusinessValidation,
+  validateRequest,
+  async (req, res) => {
+    try {
+      const { auth: currentUser } = req;
 
-    const newBusiness = new Business({
-      name: req.body.name,
-      owner: currentUser.id,
-      description: req.body.description,
-      businessType: req.body.businessType,
-      address: {
-        address: req.body.address.address,
-        city: req.body.address.city,
-        state: req.body.address.state,
-        country: req.body.address.country,
-        postalCode: req.body.address.postalCode,
-      },
-      address2: req.body.address2,
-      email: req.body.email,
-      phoneNumber: req.body.phoneNumber,
-    });
+      const newBusiness = new Business({
+        name: req.body.name,
+        owner: currentUser.id,
+        description: req.body.description,
+        businessType: req.body.businessType,
+        address: {
+          address: req.body.address.address,
+          city: req.body.address.city,
+          state: req.body.address.state,
+          country: req.body.address.country,
+          postalCode: req.body.address.postalCode,
+        },
+        address2: req.body.address2,
+        email: req.body.email,
+        phoneNumber: req.body.phoneNumber,
+      });
 
-    const savedBusiness = await newBusiness.save();
+      const savedBusiness = await newBusiness.save();
 
-    res.status(201).json({
-      success: true,
-      message: req.t('businessRegisteredSuccessfully'),
-      data: savedBusiness,
-    });
-  } catch (error) {
-    errorHandler(error, req, res);
+      res.status(201).json({
+        success: true,
+        message: req.t('businessRegisteredSuccessfully'),
+        data: savedBusiness,
+      });
+    } catch (error) {
+      errorHandler(error, req, res);
+    }
   }
-});
+);
 
 router.put(
   '/upload-logo/:id',
-  merchantAuth,
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
   uploadSingleImage,
   handleUploadError,
@@ -99,7 +108,7 @@ router.put(
 
 router.put(
   '/upload-cover/:id',
-  merchantAuth,
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
   uploadSingleImage,
   handleUploadError,
@@ -139,71 +148,103 @@ router.put(
   }
 );
 
-router.put('/:id', merchantAuth, validateObjectId, validateRequest, async (req, res) => {
-  try {
-    const business = await Business.findById(req.params.id);
+router.put(
+  '/:id',
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
+  validateObjectId,
+  validateRequest,
+  async (req, res) => {
+    try {
+      const business = await Business.findById(req.params.id);
 
-    if (!business) {
-      return res.status(404).json({ status: false, message: req.t('businessNotFound') });
-    }
-
-    Object.keys(req.body).forEach((key) => {
-      if (key !== 'logo' && key !== 'coverImage') {
-        business[key] = req.body[key];
+      if (!business) {
+        return res.status(404).json({ status: false, message: req.t('businessNotFound') });
       }
-    });
 
-    const updatedBusiness = await business.save();
+      Object.keys(req.body).forEach((key) => {
+        if (key !== 'logo' && key !== 'coverImage') {
+          business[key] = req.body[key];
+        }
+      });
 
-    res.status(200).json({
-      success: true,
-      message: req.t('businessUpdatedSuccessfully'),
-      data: updatedBusiness,
-    });
-  } catch (error) {
-    errorHandler(error, req, res);
-  }
-});
+      const updatedBusiness = await business.save();
 
-router.get('/', staffMerchantAdminAuth, async (req, res) => {
-  try {
-    let filters = {};
-
-    if (req.auth.role !== 'admin') {
-      filters.$or = [{ owner: req.auth.id }, { 'staff.user': req.auth.id }];
+      res.status(200).json({
+        success: true,
+        message: req.t('businessUpdatedSuccessfully'),
+        data: updatedBusiness,
+      });
+    } catch (error) {
+      errorHandler(error, req, res);
     }
-
-    const businesses = await Business.find(filters);
-
-    res.status(200).json({ success: true, data: businesses });
-  } catch (error) {
-    errorHandler(error, req, res);
   }
-});
+);
 
-router.get('/:id', staffMerchantAdminAuth, validateObjectId, validateRequest, async (req, res) => {
-  try {
-    let filters = { _id: req.params.id };
+router.get(
+  '/',
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
+  async (req, res) => {
+    try {
+      const userId = req.auth.id;
 
-    if (req.auth.role !== 'admin') {
-      filters.$or = [{ owner: req.auth.id }, { 'staff.user': req.auth.id }];
+      let filters = {};
+
+      if (!req.auth.roles?.includes(USER_ROLES.ADMIN)) {
+        filters.$or = [
+          // Owner del negocio
+          { owner: userId },
+
+          // Staff and active
+          { 'staff.user': userId, 'staff.isActive': true },
+        ];
+      }
+
+      const businesses = await Business.find(filters);
+
+      res.status(200).json({ success: true, data: businesses });
+    } catch (error) {
+      errorHandler(error, req, res);
     }
-
-    const business = await Business.findOne(filters);
-
-    if (!business) {
-      return res.status(404).json({ status: false, message: req.t('businessNotFound') });
-    }
-
-    res.status(200).json({ success: true, data: business });
-  } catch (error) {
-    errorHandler(error, req, res);
   }
-});
+);
+
+router.get(
+  '/:id',
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
+  validateObjectId,
+  validateRequest,
+  async (req, res) => {
+    try {
+      const userId = req.auth.id;
+
+      let filters = { _id: req.params.id };
+
+      if (!req.auth.roles?.includes(USER_ROLES.ADMIN)) {
+        filters.$or = [
+          // Owner del negocio
+          { owner: userId },
+
+          // Staff and active
+          { 'staff.user': userId, 'staff.isActive': true },
+        ];
+      }
+
+      const business = await Business.findOne(filters);
+
+      if (!business) {
+        return res.status(404).json({ status: false, message: req.t('businessNotFound') });
+      }
+
+      res.status(200).json({ success: true, data: business });
+    } catch (error) {
+      errorHandler(error, req, res);
+    }
+  }
+);
 
 router.post(
   '/:id/opening-hours',
-  merchantAndAdminAuth,
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
   validateRequest,
   async (req, res) => {
@@ -217,14 +258,8 @@ router.post(
         return res.status(404).json({ success: false, message: req.t('businessNotFound') });
       }
 
-      const isOwner = business.owner?.toString() === currentUser.id;
-      const isAdmin = currentUser.role === 'admin';
-
-      if (!isOwner && !isAdmin) {
-        return res.status(403).json({
-          success: false,
-          message: req.t('accessDenied'),
-        });
+      if (!hasBusinessAccess(business, currentUser)) {
+        return res.status(403).json({ success: false, message: req.t('accessDenied') });
       }
 
       if (rangesOverlap(ranges)) {
@@ -249,7 +284,7 @@ router.post(
 
 router.put(
   '/:id/opening-hours/:day',
-  merchantAndAdminAuth,
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
   validateRequest,
   async (req, res) => {
@@ -263,7 +298,7 @@ router.put(
         return res.status(404).json({ success: false, message: req.t('businessNotFound') });
       }
 
-      if (business.owner.toString() !== currentUser.id && currentUser.role !== 'admin') {
+      if (!hasBusinessAccess(business, currentUser)) {
         return res.status(403).json({ success: false, message: req.t('accessDenied') });
       }
 
@@ -276,7 +311,7 @@ router.put(
         return res.status(404).json({ success: false, message: req.t('openingHoursDayNotFound') });
       }
 
-      dayObj.ranges = ranges; // reemplazar completamente
+      dayObj.ranges = ranges; // replace existing ranges
       await business.save();
 
       res.status(200).json({ success: true, data: dayObj });
@@ -288,7 +323,7 @@ router.put(
 
 router.delete(
   '/:id/opening-hours/:day',
-  merchantAndAdminAuth,
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
   validateRequest,
   async (req, res) => {
@@ -301,7 +336,7 @@ router.delete(
         return res.status(404).json({ success: false, message: req.t('businessNotFound') });
       }
 
-      if (business.owner.toString() !== currentUser.id && currentUser.role !== 'admin') {
+      if (!hasBusinessAccess(business, currentUser)) {
         return res.status(403).json({ success: false, message: req.t('accessDenied') });
       }
 
@@ -315,10 +350,10 @@ router.delete(
   }
 );
 
-//Add staff to business 
+//Add staff to business
 router.post(
   '/:id/staff',
-  merchantAndAdminAuth,
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
   validateRequest,
   async (req, res) => {
@@ -332,7 +367,7 @@ router.post(
         return res.status(404).json({ success: false, message: req.t('businessNotFound') });
       }
 
-      if (business.owner.toString() !== currentUser.id && currentUser.role !== 'admin') {
+      if (!hasBusinessAccess(business, currentUser)) {
         return res.status(403).json({ success: false, message: req.t('accessDenied') });
       }
 

@@ -35,11 +35,7 @@ router.post('/register', registerValidation, validateRequest, async (req, res) =
         '</p> <p>Email: ' +
         user.email +
         '</p> <p>Phone number: ' +
-        user.phoneNumber +
-        '</p> <p>Location: ' +
-        user.city +
-        ' ' +
-        user.postalCode,
+        user.phoneNumber + '</p>',
     });
 
     return res.status(201).json({
@@ -78,7 +74,7 @@ router.post('/login', loginValidation, validateRequest, async (req, res) => {
       return res.status(401).json({ success: false, message: req.t('invalidEmailOrPassword') });
     }
 
-    const token = generateToken(user);
+    const token = await generateToken(user);
 
     return res.status(200).json({
       success: true,

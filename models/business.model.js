@@ -30,7 +30,13 @@ const businessSchema = new mongoose.Schema(
     staff: [
       {
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-        roles: [{ type: String, enum: ['reception', 'waiter', 'kitchen', 'delivery', 'cashier', 'manager'], required: true }],
+        roles: [
+          {
+            type: String,
+            enum: ['reception', 'waiter', 'kitchen', 'delivery', 'cashier', 'manager'],
+            required: true,
+          },
+        ],
         isActive: { type: Boolean, default: true },
         addedAt: { type: Date, default: Date.now },
       },
@@ -61,7 +67,7 @@ const businessSchema = new mongoose.Schema(
       state: {
         type: String,
         required: true,
-        message: 'Business country is required.',
+        message: 'Business state is required.',
       },
       country: {
         type: String,
