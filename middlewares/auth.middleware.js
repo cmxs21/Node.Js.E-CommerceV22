@@ -9,7 +9,7 @@ const publicRoutes = [
   '/auth/forgot-password',
   '/auth/reset-password',
   '/public/uploads',
-]
+];
 
 export const authMiddleware = (req, res, next) => {
   try {
@@ -22,9 +22,7 @@ export const authMiddleware = (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
-      return res
-        .status(401)
-        .json({ status: false, message: req.t('loginRequired') });
+      return res.status(401).json({ status: false, message: req.t('loginRequired') });
     }
 
     const decoded = jwt.verify(token, process.env.SECRET);
@@ -33,6 +31,7 @@ export const authMiddleware = (req, res, next) => {
       id: decoded.id,
       email: decoded.email,
       role: decoded.role,
+      roles: decoded.roles || [],
       userName: decoded.userName,
       phoneNumber: decoded.phoneNumber,
     };
@@ -40,6 +39,5 @@ export const authMiddleware = (req, res, next) => {
     next();
   } catch (error) {
     errorHandler(error, req, res);
-    //return res.status(401).json({ message: 'Unauthorized' });
   }
 };

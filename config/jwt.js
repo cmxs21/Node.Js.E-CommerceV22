@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import Business from '../models/business.model.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -7,7 +8,7 @@ export const generateToken = async (user) => {
 
   const ownedBusinesses = await Business.find({
     isActive: true,
-    owner: user._id
+    owner: user._id,
   }).select('_id');
 
   if (ownedBusinesses.length > 0) {
@@ -17,11 +18,13 @@ export const generateToken = async (user) => {
   const staffBusinesses = await Business.find({
     isActive: true,
     'staff.user': user._id,
-    'staff.isActive': true
+    'staff.isActive': true,
   }).select('_id');
 
   staffBusinesses.forEach((biz) => {
-    const staffEntry = biz.staff.find((s) => s.user.toString() === user._id.toString() && s.isActive === true);
+    const staffEntry = biz.staff.find(
+      (s) => s.user.toString() === user._id.toString() && s.isActive === true
+    );
 
     if (staffEntry && staffEntry.roles?.length > 0) {
       roles.push(...staffEntry.roles);
@@ -29,18 +32,19 @@ export const generateToken = async (user) => {
   });
 
   const uniqueRoles = [...new Set(roles)];
-  
+
   return jwt.sign(
     {
       id: user._id,
       email: user.email,
       userName: user.userName,
       phoneNumber: user.phoneNumber,
-      roles: uniqueRoles
+      role: user.role,
+      roles: uniqueRoles,
     },
     process.env.SECRET,
     {
-      expiresIn: '15d',
+      expiresIn: '30d',
     }
   );
 };

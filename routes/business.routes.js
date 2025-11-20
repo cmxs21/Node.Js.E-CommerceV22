@@ -1,5 +1,13 @@
 import express from 'express';
+import { roleAuthBuilder } from '../middlewares/roles.middleware.js';
+import { USER_ROLES, STAFF_ROLES } from '../constants/roles.constants.js';
+import { validateObjectId } from '../middlewares/validateObjectId.js';
+import validateRequest from '../middlewares/validateRequest.js';
+import errorHandler from '../middlewares/error.middleware.js';
 import Business from '../models/business.model.js';
+import { registerBusinessValidation } from '../middlewares/business.validator.js';
+import { rangesOverlap } from '../utils/time.utils.js';
+import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
 import fs from 'fs';
 import path from 'path';
 import {
@@ -7,20 +15,7 @@ import {
   getFileURL,
   handleUploadError,
 } from '../middlewares/upload.middleware.js';
-import validateRequest from '../middlewares/validateRequest.js';
-import { registerBusinessValidation } from '../middlewares/business.validator.js';
-import { validateObjectId } from '../middlewares/validateObjectId.js';
-import errorHandler from '../middlewares/error.middleware.js';
 import dotenv from 'dotenv';
-// import {
-//   merchantAndAdminAuth,
-//   merchantAuth,
-//   staffMerchantAdminAuth,
-// } from '../middlewares/roles.middleware.js';
-import { roleAuthBuilder } from '../middlewares/roles.middleware.js';
-import { rangesOverlap } from '../utils/time.utils.js';
-import { STAFF_ROLES } from '../constants/roles.constants.js';
-import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
 
 dotenv.config();
 
@@ -186,6 +181,7 @@ router.get(
   async (req, res) => {
     try {
       const userId = req.auth.id;
+      console.log(STAFF_ROLES.OWNER + ' ' + STAFF_ROLES.MANAGER + ' ' + USER_ROLES.ADMIN);
 
       let filters = {};
 

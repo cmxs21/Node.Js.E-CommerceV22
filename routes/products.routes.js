@@ -1,11 +1,11 @@
 import express from 'express';
-import { validateObjectId } from '../middlewares/validateObjectId.js';
-import validateRequest from '../middlewares/validateRequest.js';
 import errorHandler from '../middlewares/error.middleware.js';
+import { roleAuthBuilder } from '../middlewares/roles.middleware.js';
+import { USER_ROLES, STAFF_ROLES } from '../constants/roles.constants.js';
+import { validateObjectId, validateObjectIds } from '../middlewares/validateObjectId.js';
+import validateRequest from '../middlewares/validateRequest.js';
 //import { adminAuth, userAndAdminAuth } from '../middlewares/roles.middleware.js';
 import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
-import { STAFF_ROLES } from '../constants/roles.constants.js';
-import { roleAuthBuilder } from '../middlewares/roles.middleware.js';
 import ProductModel from '../models/product.model.js';
 import {
   createProductValidation,
@@ -60,15 +60,25 @@ router.post(
 );
 
 router.get(
-  '/products-admin',
-  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER, STAFF_ROLES.CASHIER, STAFF_ROLES.WAITER], { includeAdmin: true }),
+  '/products-admin/:businessId{/:categoryId}',
+  roleAuthBuilder.any(
+    [STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER, STAFF_ROLES.CASHIER, STAFF_ROLES.WAITER],
+    { includeAdmin: true }
+  ),
   async (req, res) => {
     try {
       const currentUser = req.auth;
+      const requestedBusinessId = req.params.businessId;
+      const categoryId = req.params.categoryId;
+
+      if (!requestedBusinessId) {
+        return res.status(400).json({
+          success: false,
+          message: req.t('businessIdRequired'),
+        });
+      }
 
       const search = req.query.search;
-      const categoryId = req.query.categoryId;
-      const requestedBusinessId = req.query.businessId;
 
       //Add pagination params from query params
       const page = parseInt(req.query.page) || 1;
@@ -98,7 +108,7 @@ router.get(
           if (!allowed) {
             return res.status(403).json({
               success: false,
-              message: req.t('accessDenied')
+              message: req.t('accessDenied'),
             });
           }
 
@@ -111,14 +121,14 @@ router.get(
                 staff: {
                   $elemMatch: {
                     user: currentUser.id,
-                    isActive: true
-                  }
-                }
-              }
-            ]
+                    isActive: true,
+                  },
+                },
+              },
+            ],
           }).select('_id');
 
-          const businessIds = userBusinesses.map(b => b._id);
+          const businessIds = userBusinesses.map((b) => b._id);
 
           filter.business = { $in: businessIds };
         }
@@ -130,7 +140,8 @@ router.get(
       const products = await ProductModel.find(filter)
         .populate('category')
         .populate('business', 'name')
-        .skip(skip).limit(limit);
+        .skip(skip)
+        .limit(limit);
 
       const shareDataResponse = {
         search,
@@ -164,14 +175,16 @@ router.get(
   }
 );
 
-//Products buyer 
+//Products buyer
 router.get(
-  '/',
+  '/:businessId{/:categoryId}',
+  validateObjectIds('businessId', 'categoryId'),
+  validateRequest,
   async (req, res) => {
     try {
+      const businessId = req.params.businessId;
+      const categoryId = req.params.categoryId;
       const search = req.query.search;
-      const categoryId = req.query.categoryId;
-      const businessId = req.query.businessId;
 
       if (!businessId) {
         return res.status(400).json({
@@ -232,36 +245,31 @@ router.get(
         data: products,
         ...shareDataResponse,
       });
-
     } catch (error) {
       errorHandler(error, req, res);
     }
   }
 );
 
-router.get(
-  '/:id',
-  validateObjectId,
-  validateRequest,
-  async (req, res) => {
-    try {
-      const product = await ProductModel.findByIdAndUpdate(
-        req.params.id,
-        { $inc: { views: 1 } },
-        { new: true }
-      ).populate('category')
-        .populate('business', 'name');
+router.get('/:id', validateObjectId, validateRequest, async (req, res) => {
+  try {
+    const product = await ProductModel.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    )
+      .populate('category')
+      .populate('business', 'name');
 
-      if (!product) {
-        return res.status(404).json({ success: false, message: req.t('productNotFound') });
-      }
-
-      return res.status(200).json({ success: true, data: product });
-    } catch (error) {
-      errorHandler(error, req, res);
+    if (!product) {
+      return res.status(404).json({ success: false, message: req.t('productNotFound') });
     }
+
+    return res.status(200).json({ success: true, data: product });
+  } catch (error) {
+    errorHandler(error, req, res);
   }
-);
+});
 
 router.delete(
   '/:id',

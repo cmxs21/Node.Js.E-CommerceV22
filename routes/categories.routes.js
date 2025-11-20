@@ -1,10 +1,9 @@
 import express from 'express';
-import { validateObjectId } from '../middlewares/validateObjectId.js';
+import { validateObjectId, validateObjectIds } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
 import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
 import Category from '../models/category.model.js';
-//import { adminAuth } from '../middlewares/roles.middleware.js';
-import { STAFF_ROLES } from '../constants/roles.constants.js';
+import { USER_ROLES, STAFF_ROLES } from '../constants/roles.constants.js';
 import { roleAuthBuilder } from '../middlewares/roles.middleware.js';
 
 const router = express.Router();
@@ -26,10 +25,11 @@ router.post('/', roleAuthBuilder.owner(), async (req, res) => {
 router.get(
   '/categories-admin/:businessId',
   roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
+  validateObjectId,
+  validateRequest,
   async (req, res) => {
     try {
       const currentUser = req.auth;
-      const userId = req.auth.id;
       const isAdmin = req.auth.roles.includes(USER_ROLES.ADMIN);
       const requestedBusinessId = req.query.businessId;
 
@@ -41,7 +41,10 @@ router.get(
       }
 
       if (isAdmin) {
-        const categories = await Category.find({ business: { $in: requestedBusinessId } }).populate('business', 'name');
+        const categories = await Category.find({ business: { $in: requestedBusinessId } }).populate(
+          'business',
+          'name'
+        );
         return res.status(200).json({ success: true, data: categories });
       }
 
@@ -50,11 +53,14 @@ router.get(
       if (!allowed) {
         return res.status(403).json({
           success: false,
-          message: req.t('accessDenied')
+          message: req.t('accessDenied'),
         });
       }
 
-      const categories = await Category.find({ business: { $in: requestedBusinessId } }).populate('business', 'name');
+      const categories = await Category.find({ business: { $in: requestedBusinessId } }).populate(
+        'business',
+        'name'
+      );
 
       if (!categories || categories.length === 0) {
         return res.status(404).send({ success: false, message: req.t('noCategories') });
@@ -68,44 +74,37 @@ router.get(
 );
 
 //User (buyer) categories
-router.get(
-  '/:businessId',
-  validateObjectId,
-  validateRequest,
-  async (req, res) => {
-    try {
-      const { businessId } = req.params;
+router.get('/:businessId', validateObjectId, validateRequest, async (req, res) => {
+  try {
+    const { businessId } = req.params;
 
-      if (!businessId) {
-        return res.status(400).json({
-          success: false,
-          message: req.t('businessIdRequired'),
-        });
-      }
-
-      const categories = await Category.find({ business: businessId })
-        .populate('business', 'name');
-
-      if (!categories || categories.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: req.t('noCategories'),
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        data: categories,
-      });
-    } catch (error) {
+    if (!businessId) {
       return res.status(400).json({
         success: false,
-        message: error.message,
+        message: req.t('businessIdRequired'),
       });
     }
-  }
-);
 
+    const categories = await Category.find({ business: businessId }).populate('business', 'name');
+
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: req.t('noCategories'),
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: categories,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
 
 router.delete(
   '/:id',
@@ -127,7 +126,8 @@ router.delete(
   }
 );
 
-router.put('/:id',
+router.put(
+  '/:id',
   roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
   validateRequest,
@@ -146,6 +146,7 @@ router.put('/:id',
     } catch (error) {
       return res.status(400).send({ message: error.message });
     }
-  });
+  }
+);
 
 export default router;

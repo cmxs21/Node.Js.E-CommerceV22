@@ -8,13 +8,10 @@ const roleAuth = (allowedRoles = []) => {
         return res.status(401).json({ success: false, message: req.t('loginRequired') });
       }
 
-      const userRoles = [
-        req.auth.role,         // user/admin
-        ...(req.auth.roles || []) // owner/kitchen/etc.
-      ];
+      const userRoles = Array.isArray(req.auth.roles) ? req.auth.roles : [];
 
       const hasPermission = userRoles.some((role) => allowedRoles.includes(role));
-      
+
       if (!hasPermission) {
         return res.status(403).json({ success: false, message: req.t('insufficientPermissions') });
       }
@@ -82,7 +79,7 @@ const roleAuthBuilder = {
 
   allRoles(options = {}) {
     return this.any([...ALL_ROLES_ARRAY], options);
-  }
+  },
 };
 
 export { roleAuth, roleAuthBuilder };
