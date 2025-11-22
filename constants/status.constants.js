@@ -1,3 +1,13 @@
+export const WEEKDAYS = {
+  MONDAY: 'monday',
+  TUESDAY: 'tuesday',
+  WEDNESDAY: 'wednesday',
+  THURSDAY: 'thursday',
+  FRIDAY: 'friday',
+  SATURDAY: 'saturday',
+  SUNDAY: 'sunday',
+};
+
 export const USER_STATUS = {
   ACTIVE: 'active',
   INACTIVE: 'inactive',
@@ -5,20 +15,55 @@ export const USER_STATUS = {
   PENDING: 'pending',
 };
 
+export const STAFF_ROLES = {
+  RECEPTION: 'reception',
+  WAITER: 'waiter',
+  KITCHEN: 'kitchen',
+  DELIVERY: 'delivery',
+  CASHIER: 'cashier',
+  MANAGER: 'manager',
+};
+
+export const BUSINESS_TYPE = {
+  RESTAURANT: 'restaurant',
+  TECH: 'tech',
+  FASHION: 'fashion',
+  ACCESSORIES: 'accessories',
+  GROCERY: 'grocery',
+  PETS: 'pets',
+  HEALTH: 'health',
+  OTHERS: 'others',
+};
+
 export const ORDER_STATUS = {
   PENDING: 'pending',
-  PROCESSING: 'processing',
+  PROCESS: 'process',
+  READY: 'ready',
+  ASSIGNEDTOSHIPP: 'assignedToShip',
+  SHIPPED: 'shipped',
+  DELIVERED: 'delivered',
+  CANCELLED: 'cancelled',
+};
+
+export const ORDER_ITEM_STATUS = {
+  PENDING: 'pending',
+  PROCESS: 'process',
   SHIPPED: 'shipped',
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled',
 };
 
 export const ORDER_STATUS_VALID_TRANSITIONS = {
-  [ORDER_STATUS.PENDING]: [ORDER_STATUS.PROCESSING, ORDER_STATUS.CANCELLED],
-  [ORDER_STATUS.PROCESSING]: [ORDER_STATUS.SHIPPED, ORDER_STATUS.CANCELLED],
+  [ORDER_STATUS.PENDING]: [ORDER_STATUS.PROCESS, ORDER_STATUS.CANCELLED],
+  [ORDER_STATUS.PROCESS]: [ORDER_STATUS.READY],
+  [ORDER_STATUS.READY]: [
+    ORDER_STATUS.ASSIGNEDTOSHIPP,
+    ORDER_STATUS.SHIPPED,
+    ORDER_STATUS.DELIVERED,
+  ],
   [ORDER_STATUS.SHIPPED]: [ORDER_STATUS.DELIVERED],
-  [ORDER_STATUS.DELIVERED]: [], // No puede moverse más
-  [ORDER_STATUS.CANCELLED]: [], // No puede reactivarse
+  [ORDER_STATUS.DELIVERED]: [], // Last status
+  [ORDER_STATUS.CANCELLED]: [], // Last status
 };
 
 export const PAYMENT_STATUS = {
@@ -37,12 +82,4 @@ export const PAYMENT_METHOD = {
   CARD: 'card',
   CASH_ON_DELIVERY: 'cash_on_delivery',
   PICKUP_PAYMENT: 'pickup_payment',
-};
-
-export const ORDER_ITEM_STATUS = {
-  PENDING: 'pending',
-  PROCESSING: 'processing',
-  SHIPPED: 'shipped',
-  DELIVERED: 'delivered',
-  CANCELLED: 'cancelled',
 };

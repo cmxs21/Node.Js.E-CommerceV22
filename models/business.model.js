@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
+import { STAFF_ROLES, BUSINESS_TYPE, WEEKDAYS } from '../constants/status.constants.js';
 
 const openingRangeSchema = new mongoose.Schema({
   start: { type: String, required: true },
@@ -9,7 +10,7 @@ const openingRangeSchema = new mongoose.Schema({
 const openingHoursSchema = new mongoose.Schema({
   day: {
     type: String,
-    enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+    enum: Object.values(WEEKDAYS),
     required: true,
   },
   ranges: {
@@ -33,7 +34,7 @@ const businessSchema = new mongoose.Schema(
         roles: [
           {
             type: String,
-            enum: ['reception', 'waiter', 'kitchen', 'delivery', 'cashier', 'manager'],
+            enum: Object.values(STAFF_ROLES),
             required: true,
           },
         ],
@@ -46,7 +47,7 @@ const businessSchema = new mongoose.Schema(
     coverImage: { type: String, default: 'noBusinessCoverImage.png' },
     businessType: {
       type: String,
-      enum: ['restaurant', 'tech', 'fashion', 'accessories', 'grocery', 'pets', 'health', 'others'],
+      enum: Object.values(BUSINESS_TYPE),
       default: 'others',
     },
     openingHours: {
@@ -92,13 +93,12 @@ const businessSchema = new mongoose.Schema(
 businessSchema.plugin(addCommonVirtuals);
 
 businessSchema.set('toJSON', {
-  virtuals: true, // para incluir 'id'
-  versionKey: false, // elimina __v
+  virtuals: true, // include 'id'
+  versionKey: false, // discard __v
   transform: function (doc, ret) {
-    // Elimina _id
     delete ret._id;
 
-    // Ordena los campos manualmente
+    // Order fields manually
     return {
       id: ret.id,
       name: ret.name,

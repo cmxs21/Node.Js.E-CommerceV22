@@ -19,6 +19,7 @@ import businessRouter from './routes/business.routes.js';
 import categoryRouter from './routes/categories.routes.js';
 import productsRouter from './routes/products.routes.js';
 import orderRouter from './routes/orders.routes.js';
+import deliveryRouter from './routes/delivery.routes.js';
 
 import { authMiddleware } from './middlewares/auth.middleware.js';
 
@@ -53,6 +54,7 @@ app.use(`${api}/business`, businessRouter);
 app.use(`${api}/categories`, categoryRouter);
 app.use(`${api}/products`, productsRouter);
 app.use(`${api}/orders`, orderRouter);
+app.use(`${api}/delivery`, deliveryRouter);
 
 //Test route
 app.get(`${api}/`, (req, res) => {

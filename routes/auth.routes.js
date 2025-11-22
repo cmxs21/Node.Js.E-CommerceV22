@@ -21,7 +21,7 @@ router.post('/register', registerValidation, validateRequest, async (req, res) =
 
     await user.save();
 
-    const token = generateToken(user);
+    const token = await generateToken(user);
 
     await sendEmail({
       to: 'ctecia.reports@gmail.com', //order.user.email,
@@ -35,7 +35,8 @@ router.post('/register', registerValidation, validateRequest, async (req, res) =
         '</p> <p>Email: ' +
         user.email +
         '</p> <p>Phone number: ' +
-        user.phoneNumber + '</p>',
+        user.phoneNumber +
+        '</p>',
     });
 
     return res.status(201).json({
@@ -63,9 +64,7 @@ router.post('/login', loginValidation, validateRequest, async (req, res) => {
     }
 
     if (user.status !== 'active') {
-      return res
-        .status(401)
-        .json({ success: false, message: req.t('userInactive') });
+      return res.status(401).json({ success: false, message: req.t('userInactive') });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);

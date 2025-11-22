@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
-//import Counter from './counter.model.js';
 import {
   ORDER_STATUS,
   DELIVERY_METHOD,
@@ -21,6 +20,7 @@ const orderItemSchema = new mongoose.Schema({
   slug: {
     type: String,
     required: false,
+    default: null,
   },
   quantity: {
     type: Number,
@@ -31,6 +31,12 @@ const orderItemSchema = new mongoose.Schema({
   price: {
     type: Number,
     required: [true, 'Price is required.'],
+  },
+  notes: {
+    type: String,
+    required: false,
+    maxlength: [100, 'Order notes cannot be more than 100 characters.'],
+    default: null,
   },
 });
 
@@ -71,9 +77,15 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: String,
       required: true,
-      enum: Object.values(ORDER_STATUS), // ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+      enum: Object.values(ORDER_STATUS),
       message: `Invalid status. Must be one of: ${Object.values(ORDER_STATUS).join(', ')}`,
       default: 'pending',
+    },
+    orderNotes: {
+      type: String,
+      required: false,
+      maxlength: [250, 'Order notes cannot be more than 250 characters.'],
+      default: null,
     },
     orderItems: [orderItemSchema],
     itemsPrice: {
@@ -99,7 +111,7 @@ const orderSchema = new mongoose.Schema(
     deliveryMethod: {
       type: String,
       required: true,
-      enum: Object.values(DELIVERY_METHOD), // ['delivery', 'pickup'],
+      enum: Object.values(DELIVERY_METHOD),
       message: `Invalid delivery method. Must be one of: ${Object.values(DELIVERY_METHOD).join(
         ', '
       )}`,
@@ -119,10 +131,19 @@ const orderSchema = new mongoose.Schema(
         type: String,
       },
     },
+    deliveryMan: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    deliveryAssignedAt: {
+      type: Date,
+      default: null,
+    },
     paymentInfo: {
       method: {
         type: String,
-        enum: Object.values(PAYMENT_METHOD), // ['card', 'cash_on_delivery', 'pickup_payment'],
+        enum: Object.values(PAYMENT_METHOD),
         message: `Invalid payment method. Must be one of: ${Object.values(PAYMENT_METHOD).join(
           ', '
         )}`,
@@ -133,7 +154,7 @@ const orderSchema = new mongoose.Schema(
       },
       status: {
         type: String,
-        enum: Object.values(PAYMENT_STATUS), // ['pending', 'paid', 'failed', 'refunded'],
+        enum: Object.values(PAYMENT_STATUS),
         message: `Invalid payment status. Must be one of: ${Object.values(PAYMENT_STATUS).join(
           ', '
         )}`,
@@ -141,9 +162,11 @@ const orderSchema = new mongoose.Schema(
       },
       provider: {
         type: String, // 'Stripe', 'PayPal', 'MercadoPago', etc.
+        default: null,
       },
       paidAt: {
         type: Date,
+        default: null,
       },
       cashPaymentInfo: {
         amountGiven: { type: Number }, // client payment quantity

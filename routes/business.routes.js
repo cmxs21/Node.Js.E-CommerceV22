@@ -8,6 +8,7 @@ import Business from '../models/business.model.js';
 import { registerBusinessValidation } from '../middlewares/business.validator.js';
 import { rangesOverlap } from '../utils/time.utils.js';
 import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
+import { cleanAndValidateRoles } from '../utils/role.utils.js';
 import fs from 'fs';
 import path from 'path';
 import {
@@ -15,9 +16,6 @@ import {
   getFileURL,
   handleUploadError,
 } from '../middlewares/upload.middleware.js';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const router = express.Router();
 
@@ -348,14 +346,14 @@ router.delete(
 
 //Add staff to business
 router.post(
-  '/:id/staff',
+  '/add-staff/:id',
   roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
   validateRequest,
   async (req, res) => {
     try {
       const { id } = req.params;
-      const { user } = req.body;
+      const { user, roles } = req.body;
       const currentUser = req.auth;
 
       const business = await Business.findById(id);
@@ -367,15 +365,51 @@ router.post(
         return res.status(403).json({ success: false, message: req.t('accessDenied') });
       }
 
-      const exists = business.staff.find((s) => s.user.toString() === user);
-      if (exists) {
-        return res.status(400).json({ success: false, message: req.t('staffAlreadyExists') });
+      let cleanedRoles;
+      try {
+        cleanedRoles = cleanAndValidateRoles(roles);
+      } catch (err) {
+        return res.status(400).json({ success: false, message: req.t(err.message) });
       }
 
-      business.staff.push({ user });
+      const existingStaff = business.staff.find((s) => s.user.toString() === user);
+
+      if (existingStaff) {
+        // If exists add left roles
+        const newRoles = cleanedRoles.filter((r) => !existingStaff.roles.includes(r));
+
+        if (newRoles.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: req.t('staffAlreadyExistsWithRoles'),
+          });
+        }
+
+        existingStaff.roles.push(...newRoles);
+
+        await business.save();
+
+        return res.status(200).json({
+          success: true,
+          message: req.t('staffRolesUpdatedSuccessfully'),
+          data: existingStaff,
+        });
+      }
+
+      //If not exists add all
+      business.staff.push({
+        user,
+        roles,
+        isActive: true,
+      });
+
       await business.save();
 
-      res.status(201).json({ success: true, data: business.staff });
+      res.status(201).json({
+        success: true,
+        message: req.t('staffAddedSuccessfully'),
+        data: business.staff,
+      });
     } catch (error) {
       errorHandler(error, req, res);
     }

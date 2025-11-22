@@ -45,11 +45,11 @@ const userSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: Object.values(USER_STATUS), // ['active', 'inactive', 'suspended', 'pending'],
+      enum: Object.values(USER_STATUS),
       message: `Invalid user status. Must be one of: ${Object.values(USER_STATUS).join(', ')}`,
       default: 'active',
     },
-    addresses: { type: [addressSubSchema], default: [] },// New: multiple addresses (preferred for checkout selection)
+    addresses: { type: [addressSubSchema], default: [] },
   },
   {
     timestamps: true, // add createdAt and updatedAt fields

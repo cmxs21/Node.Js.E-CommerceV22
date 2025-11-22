@@ -4,8 +4,6 @@ import { validateObjectId } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
 import { updateUserValidation } from '../middlewares/user.validator.js';
 import errorHandler from '../middlewares/error.middleware.js';
-import dotenv from 'dotenv';
-dotenv.config();
 
 const router = express.Router();
 

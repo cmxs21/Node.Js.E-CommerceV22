@@ -1,5 +1,4 @@
 import express from 'express';
-//import { userAuth } from '../middlewares/roles.middleware.js';
 import errorHandler from '../middlewares/error.middleware.js';
 import { validateObjectId } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
@@ -7,14 +6,13 @@ import { sendEmail } from '../services/email.service.js';
 import Business from '../models/business.model.js';
 import OrderModel from '../models/order.model.js';
 import ProductModel from '../models/product.model.js';
-import { createOrdersGroupedByBusiness } from '../controllers/order.controller.js';
+import { createOrderValidation } from '../middlewares/order.validator.js';
+import { createOrdersController } from '../controllers/order.controller.js';
 import { ORDER_STATUS, ORDER_STATUS_VALID_TRANSITIONS } from '../constants/status.constants.js';
-import dotenv from 'dotenv';
-dotenv.config();
 
 const router = express.Router();
 
-router.post('/create', createOrdersGroupedByBusiness);
+router.post('/create', createOrderValidation, createOrdersController);
 
 router.get('/', async (req, res) => {
   try {
@@ -37,7 +35,17 @@ router.get('/', async (req, res) => {
     } else {
       // Merchant o Staff, search for businesses where the user is involved
       const businesses = await Business.find({
-        $or: [{ owner: currentUser.id }, { 'staff.user': currentUser.id }],
+        $or: [
+          { owner: currentUser.id },
+          {
+            staff: {
+              $elemMatch: {
+                user: currentUser.id,
+                isActive: true,
+              },
+            },
+          },
+        ],
       }).select('_id');
 
       const businessIds = businesses.map((b) => b._id);
@@ -100,9 +108,19 @@ router.get('/:id', validateObjectId, validateRequest, async (req, res) => {
       // Buyer see only his orders
       accessFilters = { user: currentUser.id };
     } else {
-      // Merchant o Staff, search for businesses where the user is involved
+      // Owner or Staff, search for businesses where the user is involved
       const businesses = await Business.find({
-        $or: [{ owner: currentUser.id }, { 'staff.user': currentUser.id }],
+        $or: [
+          { owner: currentUser.id },
+          {
+            staff: {
+              $elemMatch: {
+                user: currentUser.id,
+                isActive: true,
+              },
+            },
+          },
+        ],
       }).select('_id');
 
       const businessIds = businesses.map((b) => b._id);
@@ -203,7 +221,17 @@ router.patch('/:id/status', validateObjectId, validateRequest, async (req, res) 
     } else {
       // Merchant o Staff, search for businesses where the user is involved
       const businesses = await Business.find({
-        $or: [{ owner: currentUser.id }, { 'staff.user': currentUser.id }],
+        $or: [
+          { owner: currentUser.id },
+          {
+            staff: {
+              $elemMatch: {
+                user: currentUser.id,
+                isActive: true,
+              },
+            },
+          },
+        ],
       }).select('_id');
 
       const businessIds = businesses.map((b) => b._id);

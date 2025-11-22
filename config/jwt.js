@@ -19,7 +19,7 @@ export const generateToken = async (user) => {
     isActive: true,
     'staff.user': user._id,
     'staff.isActive': true,
-  }).select('_id');
+  }).select('_id staff');
 
   staffBusinesses.forEach((biz) => {
     const staffEntry = biz.staff.find(

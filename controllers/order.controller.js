@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
+import errorHandler from '../middlewares/error.middleware.js';
 import { sendEmail } from '../services/email.service.js';
 import OrderModel from '../models/order.model.js';
 import ProductModel from '../models/product.model.js';
 import { getNextOrderNumberForBusiness, formatOrderNumber } from '../services/counter.service.js';
-import errorHandler from '../middlewares/error.middleware.js';
 import { isBusinessOpen } from '../utils/time.utils.js';
 
-export const createOrdersGroupedByBusiness = async (req, res) => {
+export const createOrdersController = async (req, res) => {
   //Create order for each business
   const session = await mongoose.startSession();
   session.startTransaction();

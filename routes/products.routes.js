@@ -4,7 +4,6 @@ import { roleAuthBuilder } from '../middlewares/roles.middleware.js';
 import { USER_ROLES, STAFF_ROLES } from '../constants/roles.constants.js';
 import { validateObjectId, validateObjectIds } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
-//import { adminAuth, userAndAdminAuth } from '../middlewares/roles.middleware.js';
 import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
 import ProductModel from '../models/product.model.js';
 import {
@@ -17,8 +16,6 @@ import {
   getFileURL,
   handleUploadError,
 } from '../middlewares/upload.middleware.js';
-import dotenv from 'dotenv';
-dotenv.config();
 
 const router = express.Router();
 
