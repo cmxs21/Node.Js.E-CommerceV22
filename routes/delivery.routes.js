@@ -7,6 +7,7 @@ import { validateObjectId, validateObjectIds } from '../middlewares/validateObje
 import validateRequest from '../middlewares/validateRequest.js';
 import { assignOrderValidation } from '../middlewares/delivery.validator.js';
 import Business from '../models/business.model.js';
+import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
 import Order from '../models/order.model.js';
 import User from '../models/user.model.js';
 
@@ -20,12 +21,26 @@ router.get(
   async (req, res) => {
     try {
       const businessId = req.params.id;
+      const currentUser = req.auth;
 
       if (!businessId) {
         return res.status(400).json({
           success: false,
           message: req.t('businessIdRequired'),
         });
+      }
+
+      const businessHasAccess = await Business.findById(businessId).select('owner staff');
+      if (!businessHasAccess) {
+        return res.status(404).json({
+          success: false,
+          message: req.t('businessNotFound'),
+        });
+      }
+
+      // Validate user belongs to business or is admin
+      if (!hasBusinessAccess(businessHasAccess, currentUser)) {
+        return res.status(403).json({ success: false, message: req.t('accessDenied') });
       }
 
       const business = await Business.aggregate([
@@ -148,7 +163,7 @@ router.get(
 
 // Assign order to delivery man
 router.post(
-  '/assign',
+  '/assign-order',
   roleAuthBuilder.staff({ includeAdmin: true }),
   assignOrderValidation,
   validateRequest,
@@ -160,6 +175,29 @@ router.post(
       const order = await Order.findById(orderId);
       if (!order) return res.status(404).json({ success: false, message: req.t('orderNotFound') });
 
+      const business = await Business.findById(order.business);
+
+      if (!business) {
+        return res.status(404).json({ success: false, message: req.t('businessNotFound') });
+      }
+
+      // Validate user belongs to business or is admin
+      if (!hasBusinessAccess(business, currentUser)) {
+        return res.status(403).json({ success: false, message: req.t('accessDenied') });
+      }
+
+      if (
+        order.status === 'assignedToShip' ||
+        order.status === 'shipped' ||
+        order.status === 'delivered' ||
+        order.status === 'cancelled'
+      ) {
+        return res.status(404).json({
+          success: false,
+          message: req.t('orderStatusNotForAssign', { status: req.t(order.status) }),
+        });
+      }
+
       if (order.status !== 'ready') {
         return res.status(404).json({ success: false, message: req.t('orderNotReadyToAssign') });
       }
@@ -169,39 +207,16 @@ router.post(
         return res.status(404).json({ success: false, message: req.t('userNotFound') });
       }
 
-      // Validate user belongs to business
-      const business = await Business.findById(order.business);
-
-      if (!business) {
-        return res.status(404).json({ success: false, message: req.t('businessNotFound') });
-      }
-
-      //Current user is business owner or staff
-      const isOwner = business.owner?.toString() === currentUser.id.toString();
-
-      const staffEntry = business.staff.find(
-        (s) =>
-          s.user.toString() === currentUser.id.toString() &&
-          s.isActive === true
-      );
-
-      if (!isOwner && !staffEntry) {
-        return res.status(403).json({
-          success: false,
-          message: req.t('accessDeniedNotBusinessMember'),
-        });
-      }
-
       // Delivery man is staff member
       const staffMember = business.staff.find(
         (s) => s.user.toString() === deliveryManId.toString()
       );
 
       if (!staffMember) {
-        return res.status(403).json({ success: false, message: req.t('deliveryManNotRegistered') });
+        return res.status(403).json({ success: false, message: req.t('staffUserNotFound') });
       }
 
-      // Validate roles and status
+      // Validate delivery role and status
       if (!staffMember.roles.includes('delivery') || !staffMember.isActive) {
         return res
           .status(403)

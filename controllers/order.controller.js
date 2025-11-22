@@ -85,9 +85,8 @@ export const createOrdersController = async (req, res) => {
           let nextOpeningText = '';
 
           if (businessOpen.nextOpening) {
-            nextOpeningText = `${req.t(businessOpen.nextOpening.day)}, ${
-              businessOpen.nextOpening.time
-            }`;
+            nextOpeningText = `${req.t(businessOpen.nextOpening.day)}, ${businessOpen.nextOpening.time
+              }`;
           } else {
             nextOpeningText = req.t('noNextOpeningAvailable');
           }
@@ -183,15 +182,14 @@ export const createOrdersController = async (req, res) => {
               (item) => `
                 <tr>
                   <td style="padding: 8px 0; display: flex; align-items: center;">
-                    <img src="${
-                      item.product.image
-                    }" width="45" height="45" style="margin-right: 8px; border-radius: 6px;" />
+                    <img src="${item.product.image
+                }" width="45" height="45" style="margin-right: 8px; border-radius: 6px;" />
                     ${item.title}
                   </td>
                   <td style="padding: 8px 0; text-align: right;">${item.quantity}</td>
                   <td style="padding: 8px 0; text-align: right;">$${(
-                    item.price * item.quantity
-                  ).toFixed(2)}</td>
+                  item.price * item.quantity
+                ).toFixed(2)}</td>
                 </tr>
               `
             )
@@ -211,14 +209,14 @@ export const createOrdersController = async (req, res) => {
                 <tbody>${itemsHtml}</tbody>
               </table>
               <p style="margin-top:10px;"><strong>${req.t(
-                'tax'
-              )}:</strong> $${order.taxPrice.toFixed(2)}</p>
+            'tax'
+          )}:</strong> $${order.taxPrice.toFixed(2)}</p>
               <p style="margin-top:10px;"><strong>${req.t(
-                'shipping'
-              )}:</strong> $${order.shippingPrice.toFixed(2)}</p>
+            'shipping'
+          )}:</strong> $${order.shippingPrice.toFixed(2)}</p>
               <p style="margin-top:10px;"><strong>${req.t(
-                'total'
-              )}:</strong> $${order.totalPrice.toFixed(2)}</p>
+            'total'
+          )}:</strong> $${order.totalPrice.toFixed(2)}</p>
               <p><strong>${req.t('orderNumber')}:</strong> ${order.orderNumber}</p>
               <p style="margin-top:15px; font-size: 13px; color: #555;">
                 ${req.t('merchant')}: ${business.owner.userName} <br/>
@@ -238,7 +236,7 @@ export const createOrdersController = async (req, res) => {
             </div>
             <div style="padding: 30px;">
               <p>${req.t('hello')}, <strong>${currentUser.userName}</strong></p>
-              <p>${req.t('orderCreatedBody', { appName: 'Tengo Hambre' })}</p>
+              <p>${req.t('orderCreatedBody', { appName: req.t('appName') })}</p>
               <p>${req.t('belowOrderDetails')}</p>
 
               ${orderDetailsHtml}
@@ -255,7 +253,7 @@ export const createOrdersController = async (req, res) => {
       await sendEmail({
         to: currentUser.email,
         bcc: 'ctecia.reports@gmail.com',
-        subject: req.t('orderCreatedSubject', { appName: 'Tengo Hambre' }),
+        subject: req.t('orderCreatedSubject', { appName: req.t('appName') }),
         html: htmlBody,
       });
     }
