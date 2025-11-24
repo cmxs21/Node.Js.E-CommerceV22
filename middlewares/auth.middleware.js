@@ -6,6 +6,7 @@ dotenv.config();
 const publicRoutes = [
   '/auth/login',
   '/auth/register',
+  '/auth/verify-email',
   '/auth/forgot-password',
   '/auth/reset-password',
   '/public/uploads',

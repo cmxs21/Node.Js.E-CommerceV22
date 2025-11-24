@@ -47,7 +47,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: Object.values(USER_STATUS),
       message: `Invalid user status. Must be one of: ${Object.values(USER_STATUS).join(', ')}`,
-      default: 'active',
+      default: 'pending',
+    },
+    emailVerifiedAt: {
+      type: Date,
+      default: null,
     },
     addresses: { type: [addressSubSchema], default: [] },
   },

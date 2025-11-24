@@ -3,12 +3,12 @@ import { roleAuthBuilder } from '../middlewares/roles.middleware.js';
 import { USER_ROLES, STAFF_ROLES } from '../constants/roles.constants.js';
 import { validateObjectId } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
+import { sendEmail } from '../services/email.service.js';
 import errorHandler from '../middlewares/error.middleware.js';
 import Business from '../models/business.model.js';
 import { registerBusinessValidation } from '../middlewares/business.validator.js';
 import { rangesOverlap } from '../utils/time.utils.js';
 import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
-import { cleanAndValidateRoles } from '../utils/role.utils.js';
 import fs from 'fs';
 import path from 'path';
 import {
@@ -46,6 +46,21 @@ router.post(
       });
 
       const savedBusiness = await newBusiness.save();
+
+      await sendEmail({
+        to: currentUser.email,
+        bcc: 'ctecia.reports@gmail.com',
+        subject: req.t('businessRegisteredSuccessfullySubject', { appName: req.t('appName'), }),
+        text: req.t('businessRegisteredSuccessfullyText', { appName: req.t('appName'), businessName: req.body.name, }),
+        html: `
+          <p><strong>${req.t('businessRegisteredSuccessfullyTitle', { appName: req.t('appName') })}</strong></p>
+          <p>${req.t('businessRegisteredSuccessfullyBody', { appName: req.t('appName') }, { businessName: req.body.name })}</p>
+          <p><strong>${req.t('userName')}:</strong> ${currentUser.userName}</p>
+          <p><strong>${req.t('businessName')}:</strong> ${req.body.name}</p>
+          <p><strong>${req.t('email')}:</strong> ${req.body.email}</p>
+          <p><strong>${req.t('phoneNumber')}:</strong> ${req.body.phoneNumber}</p>
+        `,
+      });
 
       res.status(201).json({
         success: true,

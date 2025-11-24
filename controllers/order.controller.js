@@ -244,7 +244,7 @@ export const createOrdersController = async (req, res) => {
               <p style="margin-top:30px;">${req.t('orderCreatedFooter')}</p>
             </div>
             <div style="background-color:#f1f1f1; padding:15px; text-align:center; font-size:12px; color:#666;">
-              © ${new Date().getFullYear()} Tengo Hambre — ${req.t('allRightsReserved')}
+              © ${new Date().getFullYear()} ${{ appName: req.t('appName') }} — ${req.t('allRightsReserved')}
             </div>
           </div>
         </div>
