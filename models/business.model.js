@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
-import { STAFF_ROLES, BUSINESS_TYPE, WEEKDAYS } from '../constants/status.constants.js';
+import {
+  STAFF_ROLES,
+  BUSINESS_TYPE,
+  WEEKDAYS,
+  DELIVERY_METHODS,
+} from '../constants/status.constants.js';
 
 const openingRangeSchema = new mongoose.Schema({
   start: { type: String, required: true },
@@ -53,6 +58,27 @@ const businessSchema = new mongoose.Schema(
     openingHours: {
       type: [openingHoursSchema],
       default: [],
+    },
+    deliveryMethods: {
+      type: [String],
+      enum: {
+        values: Object.values(DELIVERY_METHODS),
+        message: 'deliveryMethods must be: here, togo, pickup, delivery',
+      },
+      default: [],
+    },
+    shippingPrice: {
+      type: Number,
+      default: 0,
+      min: 0,
+      validate: {
+        validator: function (value) {
+          if (!this.deliveryMethods.includes('delivery')) return true;
+
+          return value >= 0;
+        },
+        message: 'Invalid shipping price configuration.',
+      },
     },
     address: {
       address: {

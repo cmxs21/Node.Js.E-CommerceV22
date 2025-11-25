@@ -196,7 +196,8 @@ orderSchema.plugin(addCommonVirtuals);
 orderSchema.methods.calculateTotalPrice = function () {
   this.itemsPrice = this.orderItems.reduce((total, item) => total + item.price * item.quantity, 0);
   this.taxPrice = this.itemsPrice * 0.16;
-  if (!this.shippingPrice || isNaN(this.shippingPrice)) {
+  //If business has free shipping then keep it as $0.00
+  if (this.shippingPrice == null || isNaN(this.shippingPrice)) {
     this.shippingPrice = this.itemsPrice * 0.05;
   }
   this.totalPrice = this.itemsPrice + this.taxPrice + this.shippingPrice;
@@ -206,15 +207,6 @@ orderSchema.methods.calculateTotalPrice = function () {
 
 //Pre-save middleware: runs automatically before saving the order
 orderSchema.pre('save', async function (next) {
-  // if (this.isNew) {
-  //   const nextNumber = await Counter.findOneAndUpdate(
-  //     { business: this.business },
-  //     { $inc: { sequenceValue: 1 } },
-  //     { new: true, upsert: true }
-  //   );
-  //   this.orderNumber = nextNumber.sequenceValue;
-  // }
-
   if (this.isModified('orderItems') || !this.totalPrice) {
     const totalPrice = this.calculateTotalPrice();
     this.totalPrice = totalPrice;

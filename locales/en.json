@@ -150,6 +150,8 @@
   "orderNotFound": "Order not found",
   "orderItemsRequired": "Order items are required and must be an array",
   "shippingDetailsRequired": "Shipping details, phone number, and address are required",
+  "shippingPriceCannotBeEmpty": "Shipping price cannot be empty",
+  "shippingPriceMustBeAtLeast0": "Shipping price must be at least 0",
   "orderItemValidation": "Each order item must have product, quantity, and price",
   "quantityMustBeAtLeast1": "Quantity must be at least 1",
   "orderCreatedSuccessfully": "Order created successfully",

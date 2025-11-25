@@ -73,9 +73,11 @@ export const PAYMENT_STATUS = {
   REFUNDED: 'refunded',
 };
 
-export const DELIVERY_METHOD = {
-  DELIVERY: 'delivery',
+export const DELIVERY_METHODS = {
+  HERE: 'here',
+  TOGO: 'togo',
   PICKUP: 'pickup',
+  DELIVERY: 'delivery',
 };
 
 export const PAYMENT_METHOD = {
