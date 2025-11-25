@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
 import {
   ORDER_STATUS,
-  DELIVERY_METHOD,
+  DELIVERY_METHODS,
   PAYMENT_STATUS,
   PAYMENT_METHOD,
 } from '../constants/status.constants.js';
@@ -111,8 +111,8 @@ const orderSchema = new mongoose.Schema(
     deliveryMethod: {
       type: String,
       required: true,
-      enum: Object.values(DELIVERY_METHOD),
-      message: `Invalid delivery method. Must be one of: ${Object.values(DELIVERY_METHOD).join(
+      enum: Object.values(DELIVERY_METHODS),
+      message: `Invalid delivery method. Must be one of: ${Object.values(DELIVERY_METHODS).join(
         ', '
       )}`,
       default: 'delivery',
@@ -124,10 +124,13 @@ const orderSchema = new mongoose.Schema(
       city: {
         type: String,
       },
-      postalCode: {
+      state: {
         type: String,
       },
       country: {
+        type: String,
+      },
+      postalCode: {
         type: String,
       },
     },
@@ -180,6 +183,11 @@ const orderSchema = new mongoose.Schema(
     },
     deliveredAt: {
       type: Date,
+    },
+    timezone: {
+      type: String,
+      required: true,
+      message: 'Timezone is required.',
     },
   },
   {

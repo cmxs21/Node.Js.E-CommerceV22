@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import errorHandler from '../middlewares/error.middleware.js';
 import { sendEmail } from '../services/email.service.js';
+import { DELIVERY_METHODS } from '../constants/status.constants.js';
+import Business from '../models/business.model.js';
 import OrderModel from '../models/order.model.js';
 import ProductModel from '../models/product.model.js';
 import { getNextOrderNumberForBusiness, formatOrderNumber } from '../services/counter.service.js';
@@ -9,11 +11,12 @@ import { isBusinessOpen } from '../utils/time.utils.js';
 export const createOrdersController = async (req, res) => {
   //Create order for each business
   const session = await mongoose.startSession();
-  session.startTransaction();
 
   try {
+    session.startTransaction();
     const { orderItems, deliveryMethod, shippingInfo, paymentInfo, shippingPrice } = req.body;
     const { auth: currentUser } = req;
+    const userTimezone = req.userTimezone;
 
     if (
       !orderItems ||
@@ -78,15 +81,27 @@ export const createOrdersController = async (req, res) => {
       if (!itemsWithPricesByBusiness[businesId]) {
         itemsWithPricesByBusiness[businesId] = [];
 
-        //Verify if business is open
         const business = product.business;
+
+        //Verify if busines is active or suspended
+        if (business.isActive !== true) {
+          await session.abortTransaction();
+          return res.status(400).json({
+            success: false,
+            message: req.t('businessInactive', { businessName: business.name }),
+          });
+        }
+
+        //Verify if business is open
         const businessOpen = isBusinessOpen(business);
         if (businessOpen.isOpen === false) {
+          await session.abortTransaction();
           let nextOpeningText = '';
 
           if (businessOpen.nextOpening) {
-            nextOpeningText = `${req.t(businessOpen.nextOpening.day)}, ${businessOpen.nextOpening.time
-              }`;
+            nextOpeningText = `${req.t(businessOpen.nextOpening.day)}, ${
+              businessOpen.nextOpening.time
+            }`;
           } else {
             nextOpeningText = req.t('noNextOpeningAvailable');
           }
@@ -124,11 +139,49 @@ export const createOrdersController = async (req, res) => {
     const createdOrders = [];
     const orderGroup = Date.now();
 
+    let businessMap = null;
+    const isHereTogoPickup =
+      deliveryMethod === DELIVERY_METHODS.HERE ||
+      deliveryMethod === DELIVERY_METHODS.TOGO ||
+      deliveryMethod === DELIVERY_METHODS.PICKUP;
+
+    if (isHereTogoPickup) {
+      const businessIds = Object.keys(itemsWithPricesByBusiness);
+
+      const businesses = await Business.find({ _id: { $in: businessIds } })
+        .select('address name owner')
+        .populate({
+          path: 'owner',
+          select: 'userName email phoneNumber',
+        });
+
+      businessMap = new Map();
+
+      businesses.forEach((biz) => {
+        businessMap.set(biz._id.toString(), biz);
+      });
+    }
+
     for (const [businessId, items] of Object.entries(itemsWithPricesByBusiness)) {
       const itemsPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
       const seq = await getNextOrderNumberForBusiness(businessId, session);
       const orderNumber = formatOrderNumber(businessId, seq);
+
+      let finalShippingInfo = {};
+      if (isHereTogoPickup) {
+        const business = businessMap.get(businessId);
+
+        finalShippingInfo = {
+          address: business.address.address,
+          city: business.address.city,
+          state: business.address.state,
+          country: business.address.country,
+          postalCode: business.address.postalCode,
+        };
+      } else if (deliveryMethod === DELIVERY_METHODS.DELIVERY) {
+        finalShippingInfo = shippingInfo;
+      }
 
       const newOrder = new OrderModel({
         orderGroup,
@@ -140,10 +193,11 @@ export const createOrdersController = async (req, res) => {
         phoneNumber: currentUser.phoneNumber,
         orderItems: items,
         deliveryMethod,
-        shippingInfo,
+        shippingInfo: finalShippingInfo,
         paymentInfo,
         shippingPrice: shippingPrice || 0,
         totalPrice: itemsPrice,
+        timezone: userTimezone,
       });
 
       const savedOrder = await newOrder.save({ session });
@@ -182,14 +236,15 @@ export const createOrdersController = async (req, res) => {
               (item) => `
                 <tr>
                   <td style="padding: 8px 0; display: flex; align-items: center;">
-                    <img src="${item.product.image
-                }" width="45" height="45" style="margin-right: 8px; border-radius: 6px;" />
+                    <img src="${
+                      item.product.image
+                    }" width="45" height="45" style="margin-right: 8px; border-radius: 6px;" />
                     ${item.title}
                   </td>
                   <td style="padding: 8px 0; text-align: right;">${item.quantity}</td>
                   <td style="padding: 8px 0; text-align: right;">$${(
-                  item.price * item.quantity
-                ).toFixed(2)}</td>
+                    item.price * item.quantity
+                  ).toFixed(2)}</td>
                 </tr>
               `
             )
@@ -209,14 +264,14 @@ export const createOrdersController = async (req, res) => {
                 <tbody>${itemsHtml}</tbody>
               </table>
               <p style="margin-top:10px;"><strong>${req.t(
-            'tax'
-          )}:</strong> $${order.taxPrice.toFixed(2)}</p>
+                'tax'
+              )}:</strong> $${order.taxPrice.toFixed(2)}</p>
               <p style="margin-top:10px;"><strong>${req.t(
-            'shipping'
-          )}:</strong> $${order.shippingPrice.toFixed(2)}</p>
+                'shipping'
+              )}:</strong> $${order.shippingPrice.toFixed(2)}</p>
               <p style="margin-top:10px;"><strong>${req.t(
-            'total'
-          )}:</strong> $${order.totalPrice.toFixed(2)}</p>
+                'total'
+              )}:</strong> $${order.totalPrice.toFixed(2)}</p>
               <p><strong>${req.t('orderNumber')}:</strong> ${order.orderNumber}</p>
               <p style="margin-top:15px; font-size: 13px; color: #555;">
                 ${req.t('merchant')}: ${business.owner.userName} <br/>
@@ -244,7 +299,9 @@ export const createOrdersController = async (req, res) => {
               <p style="margin-top:30px;">${req.t('orderCreatedFooter')}</p>
             </div>
             <div style="background-color:#f1f1f1; padding:15px; text-align:center; font-size:12px; color:#666;">
-              © ${new Date().getFullYear()} ${{ appName: req.t('appName') }} — ${req.t('allRightsReserved')}
+              © ${new Date().getFullYear()} ${{ appName: req.t('appName') }} — ${req.t(
+        'allRightsReserved'
+      )}
             </div>
           </div>
         </div>
@@ -264,11 +321,10 @@ export const createOrdersController = async (req, res) => {
       data: createdOrders,
     });
   } catch (error) {
-    if (session.inTransaction()) {
-      await session.abortTransaction();
-      session.endSession();
-    }
+    await session.abortTransaction();
 
     errorHandler(error, req, res);
+  } finally {
+    await session.endSession();
   }
 };

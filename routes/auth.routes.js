@@ -14,9 +14,8 @@ import {
   emailVerificationUserNotFound,
   emailVerificationSuspendedAccount,
   emailVerificationEmailAlreadyVerified,
-  EmailVerificationNoToken
-}
-  from '../templates/emailVerification.template.js';
+  EmailVerificationNoToken,
+} from '../templates/emailVerification.template.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -46,7 +45,7 @@ router.post('/register', registerValidation, validateRequest, async (req, res) =
       bcc: 'ctecia.reports@gmail.com',
       subject: req.t('emailVerificationSubject', { appName: req.t('appName') }),
       text: req.t('emailVerificationMessage'),
-      html: htmlContent
+      html: htmlContent,
     });
 
     return res.status(201).json({
@@ -102,7 +101,7 @@ router.post('/login', loginValidation, validateRequest, async (req, res) => {
   }
 });
 
-// ACTIVATE USER ACCOUNT
+// VERIFY USER ACCOUNT
 router.get('/verify-email', async (req, res) => {
   try {
     const { token } = req.query;
@@ -136,8 +135,7 @@ router.get('/verify-email', async (req, res) => {
     user.emailVerifiedAt = new Date();
     await user.save();
 
-    return res.status(200).send(emailVerifiedSuccessfully);
-
+    return res.status(200).send(emailVerifiedSuccessfully(req));
   } catch (error) {
     errorHandler(error, req, res);
   }

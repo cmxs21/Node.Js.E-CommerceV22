@@ -1,5 +1,7 @@
 import express from 'express';
+import { DateTime } from 'luxon';
 import errorHandler from '../middlewares/error.middleware.js';
+import { getTimezone } from '../middlewares/getTimeZone.middleware.js';
 import { validateObjectId } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
 import { sendEmail } from '../services/email.service.js';
@@ -12,7 +14,7 @@ import { ORDER_STATUS, ORDER_STATUS_VALID_TRANSITIONS } from '../constants/statu
 
 const router = express.Router();
 
-router.post('/create', createOrderValidation, createOrdersController);
+router.post('/create', createOrderValidation, getTimezone, createOrdersController);
 
 router.get('/', async (req, res) => {
   try {
@@ -88,6 +90,25 @@ router.get('/', async (req, res) => {
         .status(404)
         .send({ status: false, message: req.t('noOrdersFound'), ...shareDataResponse });
     }
+
+    orders.forEach((order) => {
+      order.createdAt = DateTime.fromJSDate(order.createdAt, { zone: order.timezone }).toFormat(
+        'yyyy-MM-dd HH:mm'
+      );
+      order.updatedAt = DateTime.fromJSDate(order.updatedAt, { zone: order.timezone }).toFormat(
+        'yyyy-MM-dd HH:mm'
+      );
+      if (order.deliveryAssignedAt) {
+        order.deliveryAssignedAt = DateTime.fromJSDate(order.deliveryAssignedAt, {
+          zone: order.timezone,
+        }).toFormat('yyyy-MM-dd HH:mm');
+      }
+      if (order.paymentInfo.paidAt) {
+        order.paymentInfo.paidAt = DateTime.fromJSDate(order.paymentInfo.paidAt, {
+          zone: order.timezone,
+        }).toFormat('yyyy-MM-dd HH:mm');
+      }
+    });
 
     res.status(200).json({ success: true, data: orders, ...shareDataResponse });
   } catch (error) {

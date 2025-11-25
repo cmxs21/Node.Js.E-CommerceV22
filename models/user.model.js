@@ -49,11 +49,11 @@ const userSchema = new mongoose.Schema(
       message: `Invalid user status. Must be one of: ${Object.values(USER_STATUS).join(', ')}`,
       default: 'pending',
     },
-    phoneVerifiedAt: {
+    emailVerifiedAt: {
       type: Date,
       default: null,
     },
-    emailVerifiedAt: {
+    phoneVerifiedAt: {
       type: Date,
       default: null,
     },

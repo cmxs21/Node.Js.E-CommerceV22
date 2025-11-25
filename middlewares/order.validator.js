@@ -34,6 +34,11 @@ export const createOrderValidation = [
     .withMessage((value, { req }) => req.t('phoneNumberValidation'))
     .trim(),
 
+  body('timezone')
+    .notEmpty()
+    .withMessage((value, { req }) => req.t('timezoneCannotBeEmpty'))
+    .trim(),
+
   // Optional general notes
   body('orderNotes')
     .optional()

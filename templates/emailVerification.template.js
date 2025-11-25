@@ -1,4 +1,4 @@
-export const emailVerifiedSuccessfully = (req) => htmlContent = `
+export const emailVerifiedSuccessfully = (req) => `
         <!DOCTYPE html>
         <html lang="${req.locale}">
         <head>
@@ -83,8 +83,7 @@ export const emailVerifiedSuccessfully = (req) => htmlContent = `
         </div>
         </body>
         </html>
-        `;
-
+    `;
 /*
             //after emailVerifiedMessage
             <a href="${process.env.FRONTEND_URL}/login" class="btn">
