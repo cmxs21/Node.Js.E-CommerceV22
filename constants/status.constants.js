@@ -35,6 +35,11 @@ export const BUSINESS_TYPE = {
   OTHERS: 'others',
 };
 
+export const PRODUCT_TYPE = {
+  PRODUCT: 'product',
+  COMBO: 'combo',
+};
+
 export const ORDER_STATUS = {
   PENDING: 'pending',
   PROCESS: 'process',

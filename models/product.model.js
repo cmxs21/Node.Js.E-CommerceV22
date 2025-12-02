@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
+import { PRODUCT_TYPE } from '../constants/status.constants.js';
 
 const productSchema = new mongoose.Schema(
   {
@@ -20,6 +21,26 @@ const productSchema = new mongoose.Schema(
       ref: 'Category',
       required: [true, 'Category is required.'],
     },
+    productType: {
+      type: String,
+      enum: Object.values(PRODUCT_TYPE),
+      default: 'product',
+    },
+    comboProducts: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Product',
+          required: true,
+        },
+        quantity: {
+          type: Number,
+          required: true,
+          min: 1,
+          default: 1,
+        },
+      },
+    ],
     price: {
       type: Number,
       required: [true, 'Price is required.'],

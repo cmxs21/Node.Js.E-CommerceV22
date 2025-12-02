@@ -72,7 +72,7 @@ router.post('/login', loginValidation, validateRequest, async (req, res) => {
       return res.status(401).json({ success: false, message: req.t('invalidEmailOrPassword') });
     }
 
-    if (user.status !== 'pending') {
+    if (user.status === 'pending') {
       return res.status(401).json({ success: false, message: req.t('userPending') });
     }
 

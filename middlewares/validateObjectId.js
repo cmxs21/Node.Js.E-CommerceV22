@@ -1,4 +1,5 @@
 import { param } from 'express-validator';
+import { body } from 'express-validator';
 
 export const validateObjectId = [
   param('id')
@@ -16,5 +17,16 @@ export const validateObjectIds = (...paramNames) => {
         return /^[0-9a-fA-F]{24}$/.test(value);
       })
       .withMessage(`${name} has invalid ID format`)
+  );
+};
+
+export const validateBodyObjectIds = (...fieldNames) => {
+  return fieldNames.map((field) =>
+    body(field)
+      .custom((value) => {
+        if (!value) return true;           // ✅ Campo opcional
+        return /^[0-9a-fA-F]{24}$/.test(value);
+      })
+      .withMessage(`${field} has invalid ID format`)
   );
 };

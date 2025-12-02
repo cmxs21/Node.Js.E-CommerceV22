@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import errorHandler from '../middlewares/error.middleware.js';
+import { v4 as uuid } from 'uuid';
 import { sendEmail } from '../services/email.service.js';
 import { DELIVERY_METHODS } from '../constants/status.constants.js';
 import Business from '../models/business.model.js';
@@ -33,9 +34,7 @@ export const createOrdersController = async (req, res) => {
         !orderItem.product ||
         !orderItem.quantity ||
         orderItem.quantity <= 0 ||
-        !Number.isInteger(orderItem.quantity) ||
-        !orderItem.price ||
-        orderItem.price <= 0
+        !Number.isInteger(orderItem.quantity)
       ) {
         return res.status(400).json({ status: false, message: req.t('orderItemValidation') });
       }
@@ -64,28 +63,42 @@ export const createOrdersController = async (req, res) => {
 
     //Verify if there is enough stock for the order and group items by business
     for (const orderItem of orderItems) {
-      const product = await products.find((p) => p._id.toString() === orderItem.product);
+      const product = products.find((p) => p._id.toString() === orderItem.product);
 
-      if (product.countInStock < orderItem.quantity) {
+      if (!product) continue;
+
+      if (product.productType === 'product') {
+        if (product.countInStock < orderItem.quantity) {
+          return res.status(400).json({
+            status: false,
+            message: req.t('notEnoughStock'),
+            productId: product._id,
+            productName: product.name,
+            availableStock: product.countInStock,
+            requestedQuantity: orderItem.quantity,
+          });
+        }
+      }
+
+      if (!product.price || product.price <= 0) {
         return res.status(400).json({
           status: false,
-          message: req.t('notEnoughStock'),
+          message: req.t('productPriceCannotBeZero', { productName: product.title }),
           productId: product._id,
-          productName: product.name,
-          availableStock: product.countInStock,
-          requestedQuantity: orderItem.quantity,
+          productName: product.title,
+          productPrice: product.price,
         });
       }
 
-      const businesId = product.business.id.toString();
-      if (!itemsWithPricesByBusiness[businesId]) {
-        itemsWithPricesByBusiness[businesId] = [];
+      const businessId = product.business.id.toString();
+
+      if (!itemsWithPricesByBusiness[businessId]) {
+        itemsWithPricesByBusiness[businessId] = [];
 
         const business = product.business;
 
         //Verify if busines is active or suspended
-        if (business.isActive !== true) {
-          await session.abortTransaction();
+        if (!business.isActive) {
           return res.status(400).json({
             success: false,
             message: req.t('businessInactive', { businessName: business.name }),
@@ -94,17 +107,11 @@ export const createOrdersController = async (req, res) => {
 
         //Verify if business is open
         const businessOpen = isBusinessOpen(business);
-        if (businessOpen.isOpen === false) {
-          await session.abortTransaction();
-          let nextOpeningText = '';
 
-          if (businessOpen.nextOpening) {
-            nextOpeningText = `${req.t(businessOpen.nextOpening.day)}, ${
-              businessOpen.nextOpening.time
-            }`;
-          } else {
-            nextOpeningText = req.t('noNextOpeningAvailable');
-          }
+        if (!businessOpen.isOpen) {
+          let nextOpeningText = businessOpen.nextOpening
+            ? `${req.t(businessOpen.nextOpening.day)}, ${businessOpen.nextOpening.time}`
+            : req.t('noNextOpeningAvailable');
 
           return res.status(400).json({
             success: false,
@@ -117,17 +124,74 @@ export const createOrdersController = async (req, res) => {
         }
       }
 
-      itemsWithPricesByBusiness[businesId].push({
-        product: product._id,
-        title: product.title,
-        slug: product.title.replaceAll(' ', '-').toLowerCase(),
-        quantity: orderItem.quantity,
-        price: product.price,
-      });
+      if (product.productType === 'product') {
+        itemsWithPricesByBusiness[businessId].push({
+          product: product._id,
+          productType: 'product',
+          comboGroupId: null,
+          title: product.title,
+          slug: product.title.replaceAll(' ', '-').toLowerCase(),
+          quantity: orderItem.quantity,
+          price: product.price,
+          notes: orderItem.notes,
+        });
 
-      //Update product stock
-      product.countInStock -= orderItem.quantity;
-      await product.save({ session });
+        //Update product stock
+        product.countInStock -= orderItem.quantity;
+        await product.save({ session });
+
+        continue;
+      }
+
+      //Logic to combos and combos groups
+      if (product.productType === 'combo') {
+        const comboGroupId = uuid();
+
+        // Add main product of the combo
+        itemsWithPricesByBusiness[businessId].push({
+          product: product._id,
+          productType: 'combo',
+          comboGroupId,
+          title: product.title,
+          slug: product.title.replaceAll(' ', '-').toLowerCase(),
+          quantity: orderItem.quantity,
+          price: product.price,
+          notes: orderItem.notes,
+        });
+
+        // Add combo and its products
+        for (const comboItem of product.comboProducts) {
+          const subProduct = await ProductModel.findById(comboItem.product);
+
+          if (!subProduct) continue;
+
+          const totalQty = comboItem.quantity * orderItem.quantity;
+
+          if (subProduct.countInStock < totalQty) {
+            return res.status(400).json({
+              status: false,
+              message: req.t('notEnoughStock'),
+              productId: subProduct._id,
+              availableStock: subProduct.countInStock,
+              requestedQuantity: totalQty,
+            });
+          }
+
+          itemsWithPricesByBusiness[businessId].push({
+            product: subProduct._id,
+            productType: 'product',
+            comboGroupId,
+            title: subProduct.title,
+            slug: subProduct.title.replaceAll(' ', '-').toLowerCase(),
+            quantity: totalQty,
+            price: 0, // The price of a product in a combo is 0
+          });
+
+          // Update subproduct stock
+          subProduct.countInStock -= totalQty;
+          await subProduct.save({ session });
+        }
+      }
     }
 
     //Calculate total price
@@ -312,6 +376,7 @@ export const createOrdersController = async (req, res) => {
         bcc: 'ctecia.reports@gmail.com',
         subject: req.t('orderCreatedSubject', { appName: req.t('appName') }),
         html: htmlBody,
+        text: req.t('orderCreatedBody', { appName: req.t('appName') }),
       });
     }
 
@@ -321,7 +386,7 @@ export const createOrdersController = async (req, res) => {
       data: createdOrders,
     });
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) await session.abortTransaction();
 
     errorHandler(error, req, res);
   } finally {

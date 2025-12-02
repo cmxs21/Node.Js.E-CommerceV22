@@ -20,6 +20,6 @@ export const sendEmail = async ({ to, subject, text, html, bcc }) => {
     return { success: true, message: 'Email sent successfully', data: info };
   } catch (error) {
     console.error('Error sending email:', error);
-    throw new Error('Error sending email');
+    throw new Error('Error sending email: ' + error.message);
   }
 };

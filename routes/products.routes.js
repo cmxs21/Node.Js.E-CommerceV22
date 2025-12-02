@@ -2,8 +2,10 @@ import express from 'express';
 import errorHandler from '../middlewares/error.middleware.js';
 import { roleAuthBuilder } from '../middlewares/roles.middleware.js';
 import { USER_ROLES, STAFF_ROLES } from '../constants/roles.constants.js';
-import { validateObjectId, validateObjectIds } from '../middlewares/validateObjectId.js';
+import { PRODUCT_TYPE } from '../constants/status.constants.js';
+import { validateObjectId, validateObjectIds, validateBodyObjectIds } from '../middlewares/validateObjectId.js';
 import validateRequest from '../middlewares/validateRequest.js';
+import Business from '../models/business.model.js';
 import { hasBusinessAccess } from '../utils/businessAccess.utils.js';
 import ProductModel from '../models/product.model.js';
 import {
@@ -28,15 +30,29 @@ router.post(
   validateRequest,
   async (req, res) => {
     try {
+      const currentUser = req.auth;
+
       let imageURLs = [];
       if (req.files && req.files.length > 0) {
         imageURLs = req.files.map((file) => getFileURL(req, file.filename));
+      }
+
+      const allowed = await hasBusinessAccess(req.body.business, currentUser);
+
+      if (currentUser.role === USER_ROLES.ADMIN) allowed = true;
+
+      if (!allowed) {
+        return res.status(403).json({
+          success: false,
+          message: req.t('accessDenied'),
+        });
       }
 
       const newProduct = new ProductModel({
         title: req.body.title,
         business: req.body.business,
         category: req.body.category,
+        productType: req.body.productType,
         price: parseFloat(req.body.price),
         description: req.body.description,
         image: imageURLs,
@@ -50,6 +66,216 @@ router.post(
         message: req.t('productCreatedSuccessfully'),
         data: product,
       });
+    } catch (error) {
+      errorHandler(error, req, res);
+    }
+  }
+);
+
+router.post(
+  '/combo/add-product/:comboId',
+  validateObjectIds('comboId'),
+  validateBodyObjectIds('productId'),
+  validateRequest,
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
+  async (req, res) => {
+    try {
+      const currentUser = req.auth;
+      const comboId = req.params.comboId;
+      const { productId, quantity = 1 } = req.body;
+
+      // ---------------- VALIDATIONS ----------------
+
+      if (!productId) {
+        return res.status(400).json({
+          success: false,
+          message: req.t('productRequired'),
+        });
+      }
+
+      if (!quantity || quantity < 1) {
+        return res.status(400).json({
+          success: false,
+          message: req.t('quantityInvalid'),
+        });
+      }
+
+      const combo = await ProductModel.findById(comboId);
+
+      if (!combo) {
+        return res.status(404).json({
+          success: false,
+          message: req.t('comboNotFound'),
+        });
+      }
+
+      if (combo.productType !== PRODUCT_TYPE.COMBO) {
+        return res.status(400).json({
+          success: false,
+          message: req.t('productIsNotCombo'),
+        });
+      }
+
+      // ---------------- ACCESS CONTROL ----------------
+
+      const business = await Business.findById(combo.business);
+
+      if (!business) {
+        return res.status(404).json({
+          success: false,
+          message: req.t('businessNotFound'),
+        });
+      }
+
+      let allowed = await hasBusinessAccess(business, currentUser);
+      if (currentUser.role === USER_ROLES.ADMIN) allowed = true;
+
+      if (!allowed) {
+        return res.status(403).json({
+          success: false,
+          message: req.t('accessDenied'),
+        });
+      }
+
+      // ---------------- PRODUCT VALIDATIONS ----------------
+
+      const product = await ProductModel.findById(productId);
+
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          message: req.t('productNotFound'),
+        });
+      }
+
+      if (product.productType !== PRODUCT_TYPE.PRODUCT) {
+        return res.status(400).json({
+          success: false,
+          message: req.t('comboCannotContainCombos'),
+        });
+      }
+
+      if (combo.business.toString() !== product.business.toString()) {
+        return res.status(400).json({
+          success: false,
+          message: req.t('productDoesNotBelongToBusiness'),
+        });
+      }
+
+      // ---------------- ADD / UPDATE PRODUCT ----------------
+
+      const existing = combo.comboProducts.find(
+        (p) => p.product.toString() === productId.toString()
+      );
+
+      if (existing) {
+        // If already exists, update quantity
+        existing.quantity = quantity;
+      } else {
+        // Add new product + quantity
+        combo.comboProducts.push({
+          product: product._id,
+          quantity,
+        });
+      }
+
+      await combo.save();
+
+      return res.status(200).json({
+        success: true,
+        message: req.t('productAddedToCombo'),
+        data: combo,
+      });
+
+    } catch (error) {
+      errorHandler(error, req, res);
+    }
+  }
+);
+
+router.post(
+  '/combo/remove-product/:comboId',
+  validateObjectIds('comboId'),
+  validateBodyObjectIds('productId'),
+  validateRequest,
+  roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
+  async (req, res) => {
+    try {
+      const currentUser = req.auth;
+      const comboId = req.params.comboId;
+      const productId = req.body.productId;
+
+      // ---------------- VALIDATION ----------------
+
+      if (!productId) {
+        return res.status(400).json({
+          success: false,
+          message: req.t('productRequired'),
+        });
+      }
+
+      const combo = await ProductModel.findById(comboId);
+
+      if (!combo) {
+        return res.status(404).json({
+          success: false,
+          message: req.t('comboNotFound'),
+        });
+      }
+
+      if (combo.productType !== PRODUCT_TYPE.COMBO) {
+        return res.status(400).json({
+          success: false,
+          message: req.t('productIsNotCombo'),
+        });
+      }
+
+      // ---------------- ACCESS CONTROL ----------------
+
+      const business = await Business.findById(combo.business);
+
+      if (!business) {
+        return res.status(404).json({
+          success: false,
+          message: req.t('businessNotFound'),
+        });
+      }
+
+      let allowed = await hasBusinessAccess(business, currentUser);
+      if (currentUser.role === USER_ROLES.ADMIN) allowed = true;
+
+      if (!allowed) {
+        return res.status(403).json({
+          success: false,
+          message: req.t('accessDenied'),
+        });
+      }
+
+      // ---------------- REMOVE PRODUCT ----------------
+
+      const exists = combo.comboProducts.some(
+        (p) => p.product.toString() === productId.toString()
+      );
+
+      if (!exists) {
+        return res.status(400).json({
+          success: false,
+          message: req.t('productNotInCombo'),
+        });
+      }
+
+      combo.comboProducts = combo.comboProducts.filter(
+        (p) => p.product.toString() !== productId.toString()
+      );
+
+      await combo.save();
+
+      return res.status(200).json({
+        success: true,
+        message: req.t('productRemovedFromCombo'),
+        data: combo,
+      });
+
     } catch (error) {
       errorHandler(error, req, res);
     }
@@ -137,6 +363,10 @@ router.get(
       const products = await ProductModel.find(filter)
         .populate('category')
         .populate('business', 'name')
+        .populate({
+          path: 'comboProducts.product',
+          select: 'title',
+        })
         .skip(skip)
         .limit(limit);
 
@@ -213,6 +443,10 @@ router.get(
       const products = await ProductModel.find(filter)
         .populate('category')
         .populate('business', 'name')
+        .populate({
+          path: 'comboProducts.product',
+          select: 'title',
+        })
         .skip(skip)
         .limit(limit);
 
@@ -316,7 +550,7 @@ router.put(
       }
 
       Object.keys(req.body).forEach((key) => {
-        if (key !== 'image') {
+        if (key !== 'productType' && key !== 'image') {
           product[key] = req.body[key];
         }
       });

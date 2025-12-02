@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { addCommonVirtuals } from './plugins/mongooseTransform.js';
 import {
+  PRODUCT_TYPE,
   ORDER_STATUS,
   DELIVERY_METHODS,
   PAYMENT_STATUS,
@@ -12,6 +13,16 @@ const orderItemSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
     required: true,
+  },
+  productType: {
+    type: String,
+    enum: Object.values(PRODUCT_TYPE),
+    required: true,
+  },
+  comboGroupId: {
+    type: String,
+    default: null,
+    index: true,
   },
   title: {
     type: String,
