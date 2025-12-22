@@ -50,11 +50,20 @@ router.post(
       await sendEmail({
         to: currentUser.email,
         bcc: 'ctecia.reports@gmail.com',
-        subject: req.t('businessRegisteredSuccessfullySubject', { appName: req.t('appName'), }),
-        text: req.t('businessRegisteredSuccessfullyText', { appName: req.t('appName'), businessName: req.body.name, }),
+        subject: req.t('businessRegisteredSuccessfullySubject', { appName: req.t('appName') }),
+        text: req.t('businessRegisteredSuccessfullyText', {
+          appName: req.t('appName'),
+          businessName: req.body.name,
+        }),
         html: `
-          <p><strong>${req.t('businessRegisteredSuccessfullyTitle', { appName: req.t('appName') })}</strong></p>
-          <p>${req.t('businessRegisteredSuccessfullyBody', { appName: req.t('appName') }, { businessName: req.body.name })}</p>
+          <p><strong>${req.t('businessRegisteredSuccessfullyTitle', {
+            appName: req.t('appName'),
+          })}</strong></p>
+          <p>${req.t(
+            'businessRegisteredSuccessfullyBody',
+            { appName: req.t('appName') },
+            { businessName: req.body.name }
+          )}</p>
           <p><strong>${req.t('userName')}:</strong> ${currentUser.userName}</p>
           <p><strong>${req.t('businessName')}:</strong> ${req.body.name}</p>
           <p><strong>${req.t('email')}:</strong> ${req.body.email}</p>
@@ -77,6 +86,7 @@ router.put(
   '/upload-logo/:id',
   roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
+  validateRequest,
   uploadSingleImage,
   handleUploadError,
   async (req, res) => {
@@ -118,6 +128,7 @@ router.put(
   '/upload-cover/:id',
   roleAuthBuilder.any([STAFF_ROLES.OWNER, STAFF_ROLES.MANAGER], { includeAdmin: true }),
   validateObjectId,
+  validateRequest,
   uploadSingleImage,
   handleUploadError,
   async (req, res) => {

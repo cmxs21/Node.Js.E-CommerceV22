@@ -17,9 +17,11 @@ import authRouter from './routes/auth.routes.js';
 import usersRouter from './routes/users.routes.js';
 import businessRouter from './routes/business.routes.js';
 import businessStaffRouter from './routes/businessStaff.routes.js';
+import placesRouter from './routes/place.routes.js';
 import categoryRouter from './routes/categories.routes.js';
 import productsRouter from './routes/products.routes.js';
 import orderRouter from './routes/orders.routes.js';
+import kitchenRouter from './routes/kitchen.routes.js';
 import deliveryRouter from './routes/delivery.routes.js';
 
 import { authMiddleware } from './middlewares/auth.middleware.js';
@@ -53,9 +55,11 @@ app.use(`${api}/auth`, authRouter);
 app.use(`${api}/users`, usersRouter);
 app.use(`${api}/business`, businessRouter);
 app.use(`${api}/business-staff`, businessStaffRouter);
+app.use(`${api}/places`, placesRouter);
 app.use(`${api}/categories`, categoryRouter);
 app.use(`${api}/products`, productsRouter);
 app.use(`${api}/orders`, orderRouter);
+app.use(`${api}/kitchen`, kitchenRouter);
 app.use(`${api}/delivery`, deliveryRouter);
 
 //Test route

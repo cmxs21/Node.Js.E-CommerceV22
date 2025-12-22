@@ -1,3 +1,8 @@
+import {
+  DELIVERY_METHODS,
+  PAYMENT_STATUS,
+  PAYMENT_METHODS,
+} from '../constants/status.constants.js';
 import { body } from 'express-validator';
 
 export const createOrderValidation = [
@@ -49,19 +54,19 @@ export const createOrderValidation = [
   body('deliveryMethod')
     .notEmpty()
     .withMessage((value, { req }) => req.t('deliveryMethodRequired'))
-    .isIn(['delivery', 'pickup'])
+    .isIn(DELIVERY_METHODS)
     .withMessage((value, { req }) => req.t('deliveryMethodInvalid')),
 
   // PAYMENT INFO
   body('paymentInfo.method')
     .notEmpty()
     .withMessage((value, { req }) => req.t('paymentMethodRequired'))
-    .isIn(['card', 'cash_on_delivery', 'pickup_payment'])
+    .isIn(PAYMENT_METHODS)
     .withMessage((value, { req }) => req.t('paymentMethodInvalid')),
 
   body('paymentInfo.status')
     .optional()
-    .isIn(['pending', 'paid', 'failed', 'refunded'])
+    .isIn(PAYMENT_STATUS)
     .withMessage((value, { req }) => req.t('paymentStatusInvalid')),
 
   // SHIPPING INFO (optional)

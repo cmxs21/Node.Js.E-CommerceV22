@@ -47,15 +47,27 @@ export const ORDER_STATUS = {
   ASSIGNEDTOSHIPP: 'assignedToShip',
   SHIPPED: 'shipped',
   DELIVERED: 'delivered',
+  CONSUMED: 'consumed',
   CANCELLED: 'cancelled',
 };
 
 export const ORDER_ITEM_STATUS = {
   PENDING: 'pending',
   PROCESS: 'process',
-  SHIPPED: 'shipped',
-  DELIVERED: 'delivered',
+  READY: 'ready',
   CANCELLED: 'cancelled',
+};
+
+export const ORDER_PLACE_STATUS = {
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
+};
+
+export const ORDER_ITEM_STATUS_VALID_TRANSITIONS = {
+  [ORDER_ITEM_STATUS.PENDING]: [ORDER_ITEM_STATUS.PROCESS, ORDER_ITEM_STATUS.CANCELLED],
+  [ORDER_ITEM_STATUS.PROCESS]: [ORDER_ITEM_STATUS.READY],
+  [ORDER_ITEM_STATUS.READY]: [],
+  [ORDER_ITEM_STATUS.CANCELLED]: [],
 };
 
 export const ORDER_STATUS_VALID_TRANSITIONS = {
@@ -85,8 +97,10 @@ export const DELIVERY_METHODS = {
   DELIVERY: 'delivery',
 };
 
-export const PAYMENT_METHOD = {
+export const PAYMENT_METHODS = {
   CARD: 'card',
+  CASH: 'cash',
+  CARD_ON_DELIVERY: 'card_on_delivery',
   CASH_ON_DELIVERY: 'cash_on_delivery',
   PICKUP_PAYMENT: 'pickup_payment',
 };

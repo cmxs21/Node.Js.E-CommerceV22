@@ -3,9 +3,11 @@ import { addCommonVirtuals } from './plugins/mongooseTransform.js';
 import {
   PRODUCT_TYPE,
   ORDER_STATUS,
+  ORDER_ITEM_STATUS,
+  ORDER_PLACE_STATUS,
   DELIVERY_METHODS,
   PAYMENT_STATUS,
-  PAYMENT_METHOD,
+  PAYMENT_METHODS,
 } from '../constants/status.constants.js';
 
 const orderItemSchema = new mongoose.Schema({
@@ -49,6 +51,40 @@ const orderItemSchema = new mongoose.Schema({
     maxlength: [100, 'Order notes cannot be more than 100 characters.'],
     default: null,
   },
+  productStatus: {
+    type: String,
+    enum: Object.values(ORDER_ITEM_STATUS),
+    message: `Invalid status. Must be one of: ${Object.values(ORDER_ITEM_STATUS).join(', ')}`,
+    required: true,
+    default: 'pending',
+  },
+  statusHistory: [
+    {
+      status: {
+        type: String,
+        enum: Object.values(ORDER_ITEM_STATUS),
+        required: true,
+      },
+      setBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        default: null,
+      },
+      setAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+  readyAt: {
+    type: Date,
+    default: null,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    index: true,
+  },
 });
 
 const orderSchema = new mongoose.Schema(
@@ -66,6 +102,20 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Business',
       required: true,
+    },
+    place: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Place',
+    },
+    placeName: {
+      type: String,
+      required: false,
+      default: null,
+    },
+    placeStatusSnapshot: {
+      type: String,
+      enum: Object.values(ORDER_PLACE_STATUS),
+      default: 'pending',
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -157,8 +207,8 @@ const orderSchema = new mongoose.Schema(
     paymentInfo: {
       method: {
         type: String,
-        enum: Object.values(PAYMENT_METHOD),
-        message: `Invalid payment method. Must be one of: ${Object.values(PAYMENT_METHOD).join(
+        enum: Object.values(PAYMENT_METHODS),
+        message: `Invalid payment method. Must be one of: ${Object.values(PAYMENT_METHODS).join(
           ', '
         )}`,
         required: true,

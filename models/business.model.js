@@ -26,7 +26,11 @@ const openingHoursSchema = new mongoose.Schema({
 
 const businessSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, message: 'Business name is required.' },
+    name: {
+      type: String,
+      required: true,
+      message: 'Business name is required.',
+    },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -35,7 +39,11 @@ const businessSchema = new mongoose.Schema(
     },
     staff: [
       {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
         roles: [
           {
             type: String,
@@ -58,6 +66,10 @@ const businessSchema = new mongoose.Schema(
     openingHours: {
       type: [openingHoursSchema],
       default: [],
+    },
+    dineIn: {
+      type: Boolean,
+      default: false,
     },
     deliveryMethods: {
       type: [String],
@@ -108,8 +120,21 @@ const businessSchema = new mongoose.Schema(
       },
     },
     address2: { type: String, default: '' },
-    email: { type: String, required: true, message: 'Business email is required.' },
-    phoneNumber: { type: String, required: true, message: 'Business phone is required.' },
+    email: {
+      type: String,
+      required: true,
+      message: 'Business email is required.',
+    },
+    phoneNumber: {
+      type: String,
+      required: true,
+      message: 'Business phone is required.',
+    },
+    timezone: {
+      type: String,
+      required: true,
+      message: 'Timezone is required.',
+    },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
